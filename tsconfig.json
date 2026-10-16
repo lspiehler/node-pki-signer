@@ -1,5 +1,5 @@
 {
-  // Type-checks everything in src/, tests included. Tests run directly with Node's type stripping,
+  // Type-checks everything in src/ and test/, tests included. Tests run directly with Node's type stripping,
   // so nothing is emitted here; tsconfig.build.json emits dist/ for publishing.
   "compilerOptions": {
     "target": "es2024",
@@ -23,5 +23,5 @@
     "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true
   },
-  "include": ["src/**/*.ts"]
+  "include": ["src/**/*.ts", "test/**/*.ts"]
 }
