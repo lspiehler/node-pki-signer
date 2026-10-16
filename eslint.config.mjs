@@ -5,7 +5,7 @@ import tseslint from 'typescript-eslint';
 export default tseslint.config(
   { ignores: ['**/node_modules/**', 'dist/**'] },
   {
-    files: ['src/**/*.ts'],
+    files: ['src/**/*.ts', 'test/**/*.ts'],
     extends: [eslint.configs.recommended, tseslint.configs.strictTypeChecked, tseslint.configs.stylisticTypeChecked],
     languageOptions: {
       globals: globals.node,
@@ -18,7 +18,7 @@ export default tseslint.config(
   },
   {
     // node:test's describe/test return promises that the runner tracks itself
-    files: ['src/**/*.test.ts'],
+    files: ['src/**/*.test.ts', 'test/**/*.test.ts'],
     rules: { '@typescript-eslint/no-floating-promises': 'off', '@typescript-eslint/no-non-null-assertion': 'off' },
   },
 );

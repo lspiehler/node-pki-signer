@@ -1,0 +1,2328 @@
+[
+  {
+    "name": "preset: Certificate Authority",
+    "options": {
+      "hash": "sha256",
+      "days": 3650,
+      "extensions": {
+        "authorityInfoAccess": {
+          "caIssuers": true,
+          "OCSP": true
+        },
+        "crlDistributionPoints": true,
+        "policies": true,
+        "keyUsage": {
+          "usages": ["digitalSignature", "keyCertSign", "cRLSign"],
+          "critical": true
+        },
+        "extendedKeyUsage": {
+          "usages": []
+        },
+        "basicConstraints": {
+          "critical": true,
+          "CA": true,
+          "pathlen": 1
+        }
+      }
+    }
+  },
+  {
+    "name": "preset: Web Server",
+    "options": {
+      "hash": "sha256",
+      "days": 365,
+      "extensions": {
+        "authorityInfoAccess": {
+          "caIssuers": true,
+          "OCSP": true
+        },
+        "crlDistributionPoints": true,
+        "policies": true,
+        "keyUsage": {
+          "usages": ["digitalSignature", "keyEncipherment"],
+          "critical": true
+        },
+        "extendedKeyUsage": {
+          "usages": ["serverAuth", "clientAuth"]
+        },
+        "basicConstraints": {
+          "critical": true,
+          "CA": false
+        }
+      }
+    }
+  },
+  {
+    "name": "preset: User Certificate",
+    "options": {
+      "hash": "sha256",
+      "days": 365,
+      "extensions": {
+        "authorityInfoAccess": {
+          "caIssuers": true,
+          "OCSP": true
+        },
+        "crlDistributionPoints": true,
+        "policies": true,
+        "keyUsage": {
+          "usages": ["digitalSignature", "keyEncipherment"],
+          "critical": true
+        },
+        "extendedKeyUsage": {
+          "usages": ["serverAuth", "clientAuth"]
+        },
+        "basicConstraints": {
+          "critical": true,
+          "CA": false
+        }
+      }
+    }
+  },
+  {
+    "name": "preset: Code Signing",
+    "options": {
+      "hash": "sha256",
+      "days": 365,
+      "extensions": {
+        "authorityInfoAccess": {
+          "caIssuers": true,
+          "OCSP": true
+        },
+        "crlDistributionPoints": true,
+        "policies": true,
+        "keyUsage": {
+          "usages": ["digitalSignature"]
+        },
+        "extendedKeyUsage": {
+          "usages": ["codeSigning"]
+        },
+        "basicConstraints": {
+          "critical": true,
+          "CA": false
+        }
+      }
+    }
+  },
+  {
+    "name": "dev template 1",
+    "options": {
+      "days": 365,
+      "extensions": {
+        "authorityInfoAccess": {
+          "caIssuers": true,
+          "ocsp": true
+        },
+        "crlDistributionPoints": true,
+        "keyUsage": {
+          "usages": ["digitalSignature", "keyEncipherment"],
+          "critical": true
+        },
+        "extendedKeyUsage": {
+          "usages": ["clientAuth"]
+        },
+        "basicConstraints": {
+          "critical": true,
+          "CA": false
+        }
+      }
+    }
+  },
+  {
+    "name": "dev template 2",
+    "options": {
+      "days": 365,
+      "extensions": {
+        "authorityInfoAccess": {
+          "caIssuers": false,
+          "ocsp": false
+        },
+        "crlDistributionPoints": false,
+        "keyUsage": {
+          "usages": ["digitalSignature", "keyEncipherment"],
+          "critical": true
+        },
+        "extendedKeyUsage": {
+          "usages": ["serverAuth", "clientAuth"]
+        },
+        "basicConstraints": {
+          "critical": true,
+          "CA": false
+        }
+      }
+    }
+  },
+  {
+    "name": "dev template 3",
+    "options": {
+      "days": 365,
+      "subject": {
+        "countryName": [["US"]],
+        "stateOrProvinceName": ["Louisiana"],
+        "localityName": ["New Orleans"],
+        "organizationName": ["Example Org"]
+      },
+      "extensions": {
+        "authorityInfoAccess": {
+          "caIssuers": true,
+          "ocsp": true
+        },
+        "crlDistributionPoints": true,
+        "keyUsage": {
+          "usages": ["digitalSignature", "keyEncipherment"],
+          "critical": true
+        },
+        "extendedKeyUsage": {
+          "usages": ["serverAuth", "clientAuth"]
+        },
+        "basicConstraints": {
+          "critical": true,
+          "CA": false
+        }
+      }
+    }
+  },
+  {
+    "name": "dev template 4",
+    "options": {
+      "days": 365,
+      "subject": {
+        "countryName": [["US"]],
+        "organizationName": ["Example Org"]
+      },
+      "extensions": {
+        "authorityInfoAccess": {
+          "caIssuers": false,
+          "ocsp": false
+        },
+        "crlDistributionPoints": false,
+        "keyUsage": {
+          "usages": ["digitalSignature", "keyEncipherment"],
+          "critical": true
+        },
+        "extendedKeyUsage": {
+          "usages": ["serverAuth", "clientAuth"]
+        },
+        "basicConstraints": {
+          "critical": true,
+          "CA": false
+        }
+      }
+    }
+  },
+  {
+    "name": "dev template 5",
+    "options": {
+      "days": 14,
+      "subject": {
+        "stateOrProvinceName": ["Louisiana"],
+        "localityName": ["New Orleans"],
+        "countryName": [["US"]]
+      },
+      "extensions": {
+        "authorityInfoAccess": {
+          "caIssuers": false,
+          "ocsp": false
+        },
+        "crlDistributionPoints": false,
+        "keyUsage": {
+          "usages": ["digitalSignature", "keyEncipherment"],
+          "critical": true
+        },
+        "extendedKeyUsage": {
+          "usages": ["serverAuth", "clientAuth", "emailProtection"]
+        },
+        "basicConstraints": {
+          "critical": true,
+          "CA": false
+        }
+      }
+    }
+  },
+  {
+    "name": "dev template 6",
+    "options": {
+      "days": 730,
+      "extensions": {
+        "authorityInfoAccess": {
+          "caIssuers": false,
+          "ocsp": false
+        },
+        "crlDistributionPoints": false,
+        "keyUsage": {
+          "usages": ["digitalSignature", "keyEncipherment"],
+          "critical": true
+        },
+        "extendedKeyUsage": {
+          "usages": ["serverAuth", "clientAuth"]
+        },
+        "basicConstraints": {
+          "critical": true,
+          "CA": false
+        }
+      }
+    }
+  },
+  {
+    "name": "dev template 7",
+    "options": {
+      "days": 730,
+      "extensions": {
+        "authorityInfoAccess": {
+          "caIssuers": true,
+          "ocsp": true
+        },
+        "crlDistributionPoints": true,
+        "keyUsage": {
+          "usages": ["digitalSignature", "keyEncipherment"],
+          "critical": true
+        },
+        "extendedKeyUsage": {
+          "usages": ["serverAuth", "clientAuth"]
+        },
+        "basicConstraints": {
+          "critical": true,
+          "CA": false
+        }
+      }
+    }
+  },
+  {
+    "name": "dev template 8",
+    "options": {
+      "days": 30,
+      "subject": {
+        "stateOrProvinceName": ["Louisiana"],
+        "countryName": [["US"]],
+        "localityName": ["New Orleans"]
+      },
+      "extensions": {
+        "authorityInfoAccess": {
+          "caIssuers": false,
+          "ocsp": false
+        },
+        "crlDistributionPoints": false,
+        "keyUsage": {
+          "usages": ["digitalSignature", "keyEncipherment"],
+          "critical": true
+        },
+        "extendedKeyUsage": {
+          "usages": ["serverAuth", "clientAuth"]
+        },
+        "basicConstraints": {
+          "critical": true,
+          "CA": false
+        }
+      }
+    }
+  },
+  {
+    "name": "dev template 9",
+    "options": {
+      "hash": "sha256",
+      "days": 365,
+      "subject": {
+        "countryName": [["US"]],
+        "localityName": ["New Orleans"],
+        "serialNumber": ["1234567890123456"]
+      },
+      "extensions": {
+        "authorityInfoAccess": {
+          "caIssuers": true,
+          "OCSP": true
+        },
+        "crlDistributionPoints": true,
+        "policies": true,
+        "keyUsage": {
+          "usages": ["digitalSignature", "keyEncipherment"],
+          "critical": true
+        },
+        "extendedKeyUsage": {
+          "usages": ["serverAuth", "clientAuth"]
+        },
+        "basicConstraints": {
+          "critical": true,
+          "CA": false
+        }
+      }
+    }
+  },
+  {
+    "name": "dev template 10",
+    "options": {
+      "days": 1825,
+      "extensions": {
+        "authorityInfoAccess": {
+          "caIssuers": true,
+          "ocsp": true
+        },
+        "crlDistributionPoints": true,
+        "keyUsage": {
+          "usages": ["digitalSignature", "keyCertSign", "cRLSign"],
+          "critical": true
+        },
+        "extendedKeyUsage": {
+          "usages": []
+        },
+        "basicConstraints": {
+          "critical": true,
+          "CA": true,
+          "pathlen": 0
+        }
+      }
+    }
+  },
+  {
+    "name": "dev template 11",
+    "options": {
+      "hash": "sha256",
+      "days": 365,
+      "extensions": {
+        "authorityInfoAccess": {
+          "caIssuers": false,
+          "OCSP": false
+        },
+        "crlDistributionPoints": false,
+        "policies": false,
+        "keyUsage": {
+          "usages": ["digitalSignature", "keyEncipherment"],
+          "critical": true
+        },
+        "extendedKeyUsage": {
+          "usages": ["serverAuth", "clientAuth", "1.3.6.1.4.1.311.20.2.2"]
+        },
+        "basicConstraints": {
+          "critical": true,
+          "CA": false
+        }
+      }
+    }
+  },
+  {
+    "name": "dev template 12",
+    "options": {
+      "hash": "sha256",
+      "days": 60,
+      "subject": {
+        "countryName": [["US"]],
+        "stateOrProvinceName": ["Louisiana"]
+      },
+      "extensions": {
+        "authorityInfoAccess": {
+          "caIssuers": true,
+          "OCSP": true
+        },
+        "crlDistributionPoints": true,
+        "policies": true,
+        "keyUsage": {
+          "usages": ["digitalSignature", "keyEncipherment"],
+          "critical": true
+        },
+        "extendedKeyUsage": {
+          "usages": ["serverAuth", "clientAuth"]
+        },
+        "basicConstraints": {
+          "critical": true,
+          "CA": false
+        }
+      }
+    }
+  },
+  {
+    "name": "dev template 13",
+    "options": {
+      "days": 365,
+      "extensions": {
+        "keyUsage": {
+          "critical": true,
+          "usages": ["digitalSignature", "keyEncipherment"]
+        },
+        "extendedKeyUsage": {
+          "critical": false,
+          "usages": ["serverAuth", "clientAuth"]
+        },
+        "basicConstraints": {
+          "critical": true,
+          "CA": false
+        }
+      }
+    }
+  },
+  {
+    "name": "dev template 14",
+    "options": {
+      "hash": "sha512",
+      "days": 365,
+      "extensions": {
+        "authorityInfoAccess": {
+          "caIssuers": true,
+          "OCSP": true
+        },
+        "crlDistributionPoints": true,
+        "policies": true,
+        "keyUsage": {
+          "usages": ["digitalSignature", "keyEncipherment"],
+          "critical": true
+        },
+        "extendedKeyUsage": {
+          "usages": ["serverAuth", "clientAuth"]
+        },
+        "basicConstraints": {
+          "critical": true,
+          "CA": false
+        }
+      }
+    }
+  },
+  {
+    "name": "dev template 15",
+    "options": {
+      "days": 365,
+      "extensions": {
+        "authorityInfoAccess": {
+          "caIssuers": true,
+          "OCSP": true
+        },
+        "crlDistributionPoints": true,
+        "policies": true,
+        "keyUsage": {
+          "usages": []
+        },
+        "extendedKeyUsage": {
+          "usages": ["codeSigning"]
+        },
+        "basicConstraints": {
+          "critical": true,
+          "CA": false
+        }
+      }
+    }
+  },
+  {
+    "name": "dev template 16",
+    "options": {
+      "days": 365,
+      "extensions": {
+        "authorityInfoAccess": {
+          "caIssuers": true,
+          "OCSP": true
+        },
+        "crlDistributionPoints": true,
+        "policies": true,
+        "keyUsage": {
+          "usages": ["digitalSignature", "keyEncipherment"],
+          "critical": true
+        },
+        "extendedKeyUsage": {
+          "usages": ["serverAuth", "clientAuth"]
+        },
+        "basicConstraints": {
+          "critical": true,
+          "CA": false
+        }
+      }
+    }
+  },
+  {
+    "name": "dev template 17",
+    "options": {
+      "days": 365,
+      "extensions": {
+        "keyUsage": {
+          "critical": true,
+          "usages": ["digitalSignature", "keyEncipherment"]
+        },
+        "extendedKeyUsage": {
+          "critical": false,
+          "usages": ["serverAuth", "clientAuth"]
+        },
+        "basicConstraints": {
+          "critical": true,
+          "CA": false
+        },
+        "authorityInfoAccess": {
+          "caIssuers": true,
+          "OCSP": true
+        },
+        "crlDistributionPoints": true,
+        "policies": true
+      }
+    }
+  },
+  {
+    "name": "dev template 18",
+    "options": {
+      "hash": "sha256",
+      "days": 365,
+      "extensions": {
+        "keyUsage": {
+          "critical": true,
+          "usages": ["digitalSignature", "keyEncipherment"]
+        },
+        "extendedKeyUsage": {
+          "critical": false,
+          "usages": ["serverAuth", "clientAuth"]
+        },
+        "basicConstraints": {
+          "critical": true,
+          "CA": false
+        },
+        "authorityInfoAccess": {
+          "caIssuers": true,
+          "OCSP": true
+        },
+        "crlDistributionPoints": true,
+        "policies": true
+      }
+    }
+  },
+  {
+    "name": "dev template 19",
+    "options": {
+      "hash": "sha256",
+      "days": 3650,
+      "extensions": {
+        "authorityInfoAccess": {
+          "caIssuers": true,
+          "OCSP": true
+        },
+        "crlDistributionPoints": true,
+        "policies": true,
+        "keyUsage": {
+          "usages": ["digitalSignature", "keyCertSign", "cRLSign"],
+          "critical": true
+        },
+        "extendedKeyUsage": {
+          "usages": ["serverAuth", "clientAuth"]
+        },
+        "basicConstraints": {
+          "critical": true,
+          "CA": true,
+          "pathlen": 3
+        }
+      }
+    }
+  },
+  {
+    "name": "dev template 20",
+    "options": {
+      "hash": "sha256",
+      "days": 3650,
+      "extensions": {
+        "authorityInfoAccess": {
+          "caIssuers": true,
+          "OCSP": true
+        },
+        "crlDistributionPoints": true,
+        "policies": true,
+        "keyUsage": {
+          "usages": ["digitalSignature", "keyCertSign", "cRLSign"],
+          "critical": true
+        },
+        "extendedKeyUsage": {
+          "usages": ["serverAuth", "clientAuth"]
+        },
+        "basicConstraints": {
+          "critical": true,
+          "CA": true,
+          "pathlen": 2
+        }
+      }
+    }
+  },
+  {
+    "name": "dev template 21",
+    "options": {
+      "hash": "sha256",
+      "days": 365,
+      "subject": {
+        "countryName": [["US"]],
+        "stateOrProvinceName": ["Louisiana"],
+        "organizationName": ["Example Org"]
+      },
+      "extensions": {
+        "authorityInfoAccess": {
+          "caIssuers": true,
+          "OCSP": true
+        },
+        "crlDistributionPoints": true,
+        "policies": true,
+        "keyUsage": {
+          "usages": ["digitalSignature", "keyEncipherment"],
+          "critical": true
+        },
+        "extendedKeyUsage": {
+          "usages": ["serverAuth", "clientAuth"]
+        },
+        "basicConstraints": {
+          "critical": true,
+          "CA": false
+        }
+      }
+    }
+  },
+  {
+    "name": "dev template 22",
+    "options": {
+      "hash": "sha256",
+      "days": 365,
+      "extensions": {
+        "authorityInfoAccess": {
+          "caIssuers": true,
+          "OCSP": true
+        },
+        "crlDistributionPoints": true,
+        "policies": true,
+        "keyUsage": {
+          "usages": ["digitalSignature", "keyCertSign", "cRLSign"],
+          "critical": true
+        },
+        "extendedKeyUsage": {
+          "usages": []
+        },
+        "basicConstraints": {
+          "critical": true,
+          "CA": true,
+          "pathlen": 2
+        }
+      }
+    }
+  },
+  {
+    "name": "dev template 23",
+    "options": {
+      "hash": "sha256",
+      "days": 825,
+      "extensions": {
+        "authorityInfoAccess": {
+          "caIssuers": true,
+          "OCSP": true
+        },
+        "crlDistributionPoints": true,
+        "policies": true,
+        "keyUsage": {
+          "usages": ["digitalSignature", "keyEncipherment"],
+          "critical": true
+        },
+        "extendedKeyUsage": {
+          "usages": ["serverAuth", "clientAuth"]
+        },
+        "basicConstraints": {
+          "critical": true,
+          "CA": false
+        }
+      }
+    }
+  },
+  {
+    "name": "dev template 24",
+    "options": {
+      "hash": "sha256",
+      "days": 365,
+      "extensions": {
+        "authorityInfoAccess": {
+          "caIssuers": false,
+          "OCSP": true
+        },
+        "crlDistributionPoints": true,
+        "policies": true,
+        "keyUsage": {
+          "usages": ["digitalSignature", "keyCertSign", "cRLSign"],
+          "critical": true
+        },
+        "extendedKeyUsage": {
+          "usages": ["serverAuth", "clientAuth"]
+        },
+        "basicConstraints": {
+          "critical": true,
+          "CA": true,
+          "pathlen": 0
+        }
+      }
+    }
+  },
+  {
+    "name": "dev template 25",
+    "options": {
+      "hash": "sha256",
+      "days": 3650,
+      "extensions": {
+        "authorityInfoAccess": {
+          "caIssuers": true,
+          "OCSP": true
+        },
+        "crlDistributionPoints": true,
+        "policies": true,
+        "keyUsage": {
+          "usages": ["digitalSignature", "keyCertSign", "cRLSign"],
+          "critical": true
+        },
+        "extendedKeyUsage": {
+          "usages": []
+        },
+        "basicConstraints": {
+          "critical": true,
+          "CA": true,
+          "pathlen": 2
+        }
+      }
+    }
+  },
+  {
+    "name": "dev template 26",
+    "options": {
+      "hash": "sha384",
+      "days": 365,
+      "extensions": {
+        "authorityInfoAccess": {
+          "caIssuers": true,
+          "OCSP": true
+        },
+        "crlDistributionPoints": true,
+        "policies": true,
+        "keyUsage": {
+          "usages": ["digitalSignature", "keyEncipherment"],
+          "critical": true
+        },
+        "extendedKeyUsage": {
+          "usages": ["serverAuth", "clientAuth"]
+        },
+        "basicConstraints": {
+          "critical": true,
+          "CA": false
+        }
+      }
+    }
+  },
+  {
+    "name": "dev template 27",
+    "options": {
+      "hash": "sha256",
+      "days": 365,
+      "extensions": {
+        "authorityInfoAccess": {
+          "caIssuers": false,
+          "OCSP": true
+        },
+        "crlDistributionPoints": false,
+        "policies": true,
+        "keyUsage": {
+          "usages": ["digitalSignature", "keyEncipherment"],
+          "critical": true
+        },
+        "extendedKeyUsage": {
+          "usages": ["serverAuth", "clientAuth"]
+        },
+        "basicConstraints": {
+          "critical": true,
+          "CA": false
+        }
+      }
+    }
+  },
+  {
+    "name": "dev template 28",
+    "options": {
+      "hash": "sha256",
+      "days": 14,
+      "extensions": {
+        "authorityInfoAccess": {
+          "caIssuers": true,
+          "OCSP": true
+        },
+        "crlDistributionPoints": true,
+        "policies": true,
+        "keyUsage": {
+          "usages": ["digitalSignature", "keyEncipherment"],
+          "critical": true
+        },
+        "extendedKeyUsage": {
+          "usages": ["serverAuth", "clientAuth"]
+        },
+        "basicConstraints": {
+          "critical": true,
+          "CA": false
+        }
+      }
+    }
+  },
+  {
+    "name": "dev template 29",
+    "options": {
+      "hash": "sha256",
+      "days": 6,
+      "extensions": {
+        "authorityInfoAccess": {
+          "caIssuers": true,
+          "OCSP": true
+        },
+        "crlDistributionPoints": true,
+        "policies": true,
+        "keyUsage": {
+          "usages": ["digitalSignature", "keyEncipherment"],
+          "critical": true
+        },
+        "extendedKeyUsage": {
+          "usages": ["serverAuth", "clientAuth"]
+        },
+        "basicConstraints": {
+          "critical": true,
+          "CA": false
+        }
+      }
+    }
+  },
+  {
+    "name": "dev template 30",
+    "options": {
+      "hash": "sha256",
+      "days": 3650,
+      "extensions": {
+        "authorityInfoAccess": {
+          "caIssuers": true,
+          "OCSP": true
+        },
+        "crlDistributionPoints": true,
+        "policies": true,
+        "keyUsage": {
+          "usages": ["digitalSignature", "keyCertSign", "cRLSign"],
+          "critical": true
+        },
+        "extendedKeyUsage": {
+          "usages": ["serverAuth", "clientAuth", "timeStamping"]
+        },
+        "basicConstraints": {
+          "critical": true,
+          "CA": true,
+          "pathlen": 1
+        }
+      }
+    }
+  },
+  {
+    "name": "dev template 31",
+    "options": {
+      "hash": "sha256",
+      "days": 3650,
+      "extensions": {
+        "authorityInfoAccess": {
+          "caIssuers": true,
+          "OCSP": true
+        },
+        "crlDistributionPoints": true,
+        "policies": true,
+        "keyUsage": {
+          "usages": ["digitalSignature", "keyCertSign", "cRLSign"],
+          "critical": true
+        },
+        "extendedKeyUsage": {
+          "usages": ["serverAuth", "clientAuth", "codeSigning", "OCSPSigning"]
+        },
+        "basicConstraints": {
+          "critical": true,
+          "CA": true,
+          "pathlen": 1
+        }
+      }
+    }
+  },
+  {
+    "name": "dev template 32",
+    "options": {
+      "hash": "sha256",
+      "days": 365,
+      "extensions": {
+        "authorityInfoAccess": {
+          "caIssuers": true,
+          "OCSP": true
+        },
+        "crlDistributionPoints": false,
+        "policies": true,
+        "keyUsage": {
+          "usages": ["digitalSignature", "keyEncipherment"],
+          "critical": true
+        },
+        "extendedKeyUsage": {
+          "usages": ["serverAuth", "clientAuth"]
+        },
+        "basicConstraints": {
+          "critical": true,
+          "CA": false
+        }
+      }
+    }
+  },
+  {
+    "name": "dev template 33",
+    "options": {
+      "hash": "sha256",
+      "days": 5475,
+      "extensions": {
+        "authorityInfoAccess": {
+          "caIssuers": true,
+          "OCSP": true
+        },
+        "crlDistributionPoints": true,
+        "policies": true,
+        "keyUsage": {
+          "usages": ["digitalSignature", "keyCertSign", "cRLSign"],
+          "critical": true
+        },
+        "extendedKeyUsage": {
+          "usages": []
+        },
+        "basicConstraints": {
+          "critical": true,
+          "CA": true,
+          "pathlen": 1
+        }
+      }
+    }
+  },
+  {
+    "name": "dev template 34",
+    "options": {
+      "hash": "sha256",
+      "days": 5475,
+      "extensions": {
+        "authorityInfoAccess": {
+          "caIssuers": true,
+          "OCSP": true
+        },
+        "crlDistributionPoints": true,
+        "policies": true,
+        "keyUsage": {
+          "usages": ["digitalSignature", "keyCertSign", "cRLSign"],
+          "critical": true
+        },
+        "extendedKeyUsage": {
+          "usages": []
+        },
+        "basicConstraints": {
+          "critical": true,
+          "CA": true,
+          "pathlen": 0
+        }
+      }
+    }
+  },
+  {
+    "name": "dev template 35",
+    "options": {
+      "hash": "sha256",
+      "days": 365,
+      "extensions": {
+        "authorityInfoAccess": {
+          "caIssuers": true,
+          "OCSP": true
+        },
+        "crlDistributionPoints": true,
+        "policies": true,
+        "keyUsage": {
+          "usages": ["digitalSignature", "keyEncipherment"],
+          "critical": true
+        },
+        "extendedKeyUsage": {
+          "usages": ["serverAuth", "clientAuth", "OCSPSigning"]
+        },
+        "basicConstraints": {
+          "critical": true,
+          "CA": false
+        }
+      }
+    }
+  },
+  {
+    "name": "dev template 36",
+    "options": {
+      "hash": "sha256",
+      "days": 3650,
+      "extensions": {
+        "authorityInfoAccess": {
+          "caIssuers": true,
+          "OCSP": false
+        },
+        "crlDistributionPoints": true,
+        "policies": true,
+        "keyUsage": {
+          "usages": ["digitalSignature", "keyCertSign", "cRLSign"],
+          "critical": true
+        },
+        "extendedKeyUsage": {
+          "usages": []
+        },
+        "basicConstraints": {
+          "critical": true,
+          "CA": true,
+          "pathlen": 1
+        }
+      }
+    }
+  },
+  {
+    "name": "dev template 37",
+    "options": {
+      "hash": "sha256",
+      "days": 3650,
+      "extensions": {
+        "authorityInfoAccess": {
+          "caIssuers": true,
+          "OCSP": true
+        },
+        "crlDistributionPoints": true,
+        "policies": true,
+        "keyUsage": {
+          "usages": ["digitalSignature", "keyCertSign", "cRLSign"],
+          "critical": true
+        },
+        "extendedKeyUsage": {
+          "usages": ["serverAuth", "clientAuth", "OCSPSigning"],
+          "critical": true
+        },
+        "basicConstraints": {
+          "critical": true,
+          "CA": true,
+          "pathlen": 0
+        }
+      }
+    }
+  },
+  {
+    "name": "dev template 38",
+    "options": {
+      "hash": "sha256",
+      "days": 3650,
+      "extensions": {
+        "authorityInfoAccess": {
+          "caIssuers": true,
+          "OCSP": true
+        },
+        "crlDistributionPoints": true,
+        "policies": true,
+        "keyUsage": {
+          "usages": ["digitalSignature", "keyCertSign", "cRLSign"],
+          "critical": true
+        },
+        "extendedKeyUsage": {
+          "usages": ["serverAuth", "clientAuth", "OCSPSigning"],
+          "critical": true
+        },
+        "basicConstraints": {
+          "critical": true,
+          "CA": true
+        }
+      }
+    }
+  },
+  {
+    "name": "dev template 39",
+    "options": {
+      "hash": "sha256",
+      "days": 3650,
+      "extensions": {
+        "authorityInfoAccess": {
+          "caIssuers": true,
+          "OCSP": true
+        },
+        "crlDistributionPoints": true,
+        "policies": true,
+        "keyUsage": {
+          "usages": ["digitalSignature", "keyCertSign", "cRLSign"],
+          "critical": true
+        },
+        "extendedKeyUsage": {
+          "usages": []
+        },
+        "basicConstraints": {
+          "critical": true,
+          "CA": true,
+          "pathlen": 0
+        }
+      }
+    }
+  },
+  {
+    "name": "dev template 40",
+    "options": {
+      "hash": "sha256",
+      "days": 3650,
+      "extensions": {
+        "authorityInfoAccess": {
+          "caIssuers": true,
+          "OCSP": true
+        },
+        "crlDistributionPoints": true,
+        "policies": true,
+        "keyUsage": {
+          "usages": ["digitalSignature", "keyCertSign", "cRLSign"],
+          "critical": true
+        },
+        "extendedKeyUsage": {
+          "usages": []
+        },
+        "basicConstraints": {
+          "critical": true,
+          "CA": true
+        }
+      }
+    }
+  },
+  {
+    "name": "dev template 41",
+    "options": {
+      "hash": "sha256",
+      "days": 3650,
+      "extensions": {
+        "authorityInfoAccess": {
+          "caIssuers": true,
+          "OCSP": false
+        },
+        "crlDistributionPoints": true,
+        "policies": true,
+        "keyUsage": {
+          "usages": ["digitalSignature", "keyCertSign", "cRLSign"],
+          "critical": true
+        },
+        "extendedKeyUsage": {
+          "usages": []
+        },
+        "basicConstraints": {
+          "critical": true,
+          "CA": true
+        }
+      }
+    }
+  },
+  {
+    "name": "dev template 42",
+    "options": {
+      "hash": "sha256",
+      "days": 365,
+      "extensions": {
+        "authorityInfoAccess": {
+          "caIssuers": true,
+          "OCSP": true
+        },
+        "crlDistributionPoints": true,
+        "policies": true,
+        "keyUsage": {
+          "usages": ["digitalSignature", "keyCertSign", "cRLSign"],
+          "critical": true
+        },
+        "extendedKeyUsage": {
+          "usages": ["serverAuth", "clientAuth"],
+          "critical": true
+        },
+        "basicConstraints": {
+          "critical": true,
+          "CA": false
+        }
+      }
+    }
+  },
+  {
+    "name": "dev template 43",
+    "options": {
+      "hash": "sha256",
+      "days": 3650,
+      "extensions": {
+        "authorityInfoAccess": {
+          "caIssuers": true,
+          "OCSP": true
+        },
+        "crlDistributionPoints": true,
+        "policies": true,
+        "keyUsage": {
+          "usages": ["digitalSignature", "keyCertSign", "cRLSign"],
+          "critical": true
+        },
+        "extendedKeyUsage": {
+          "usages": ["serverAuth", "clientAuth", "codeSigning", "emailProtection", "OCSPSigning"],
+          "critical": true
+        },
+        "basicConstraints": {
+          "critical": true,
+          "CA": true
+        }
+      }
+    }
+  },
+  {
+    "name": "dev template 44",
+    "options": {
+      "hash": "sha256",
+      "days": 5475,
+      "extensions": {
+        "authorityInfoAccess": {
+          "caIssuers": true,
+          "OCSP": true
+        },
+        "crlDistributionPoints": true,
+        "policies": true,
+        "keyUsage": {
+          "usages": ["digitalSignature", "keyCertSign", "cRLSign"],
+          "critical": true
+        },
+        "extendedKeyUsage": {
+          "usages": ["serverAuth", "clientAuth", "OCSPSigning"],
+          "critical": true
+        },
+        "basicConstraints": {
+          "critical": true,
+          "CA": true
+        }
+      }
+    }
+  },
+  {
+    "name": "dev template 45",
+    "options": {
+      "hash": "sha256",
+      "days": 7300,
+      "extensions": {
+        "authorityInfoAccess": {
+          "caIssuers": true,
+          "OCSP": true
+        },
+        "crlDistributionPoints": true,
+        "policies": true,
+        "keyUsage": {
+          "usages": ["digitalSignature", "keyCertSign", "cRLSign"],
+          "critical": true
+        },
+        "extendedKeyUsage": {
+          "usages": []
+        },
+        "basicConstraints": {
+          "critical": true,
+          "CA": true
+        }
+      }
+    }
+  },
+  {
+    "name": "dev template 46",
+    "options": {
+      "hash": "sha256",
+      "days": 5475,
+      "extensions": {
+        "authorityInfoAccess": {
+          "caIssuers": true,
+          "OCSP": true
+        },
+        "crlDistributionPoints": true,
+        "policies": true,
+        "keyUsage": {
+          "usages": ["digitalSignature", "keyCertSign", "cRLSign"],
+          "critical": true
+        },
+        "extendedKeyUsage": {
+          "usages": []
+        },
+        "basicConstraints": {
+          "critical": true,
+          "CA": true
+        }
+      }
+    }
+  },
+  {
+    "name": "dev template 47",
+    "options": {
+      "hash": "sha256",
+      "days": 5110,
+      "extensions": {
+        "authorityInfoAccess": {
+          "caIssuers": true,
+          "OCSP": true
+        },
+        "crlDistributionPoints": true,
+        "policies": true,
+        "keyUsage": {
+          "usages": ["digitalSignature", "keyCertSign", "cRLSign"],
+          "critical": true
+        },
+        "extendedKeyUsage": {
+          "usages": []
+        },
+        "basicConstraints": {
+          "critical": true,
+          "CA": true
+        }
+      }
+    }
+  },
+  {
+    "name": "dev template 48",
+    "options": {
+      "hash": "sha256",
+      "days": 3650,
+      "extensions": {
+        "authorityInfoAccess": {
+          "caIssuers": true,
+          "OCSP": true
+        },
+        "crlDistributionPoints": true,
+        "policies": true,
+        "keyUsage": {
+          "usages": ["digitalSignature", "keyCertSign", "cRLSign"],
+          "critical": true
+        },
+        "extendedKeyUsage": {
+          "usages": ["serverAuth", "clientAuth", "OCSPSigning"]
+        },
+        "basicConstraints": {
+          "critical": true,
+          "CA": true
+        }
+      }
+    }
+  },
+  {
+    "name": "dev template 49",
+    "options": {
+      "hash": "sha256",
+      "days": 3650,
+      "extensions": {
+        "authorityInfoAccess": {
+          "caIssuers": true,
+          "OCSP": true
+        },
+        "crlDistributionPoints": true,
+        "policies": true,
+        "keyUsage": {
+          "usages": ["digitalSignature", "keyCertSign", "cRLSign"],
+          "critical": true
+        },
+        "extendedKeyUsage": {
+          "usages": ["serverAuth", "clientAuth", "OCSPSigning"],
+          "critical": true
+        },
+        "basicConstraints": {
+          "critical": true,
+          "CA": true,
+          "pathlen": 1
+        }
+      }
+    }
+  },
+  {
+    "name": "dev template 50",
+    "options": {
+      "hash": "sha256",
+      "days": 90,
+      "extensions": {
+        "authorityInfoAccess": {
+          "caIssuers": true,
+          "OCSP": true
+        },
+        "crlDistributionPoints": true,
+        "policies": true,
+        "keyUsage": {
+          "usages": ["digitalSignature", "keyEncipherment"],
+          "critical": true
+        },
+        "extendedKeyUsage": {
+          "usages": ["serverAuth", "clientAuth"]
+        },
+        "basicConstraints": {
+          "critical": true,
+          "CA": false
+        }
+      }
+    }
+  },
+  {
+    "name": "dev template 51",
+    "options": {
+      "hash": "sha256",
+      "days": 3650,
+      "extensions": {
+        "authorityInfoAccess": {
+          "caIssuers": true,
+          "OCSP": true
+        },
+        "crlDistributionPoints": true,
+        "policies": true,
+        "keyUsage": {
+          "usages": ["digitalSignature", "keyCertSign", "cRLSign"],
+          "critical": true
+        },
+        "extendedKeyUsage": {
+          "usages": ["serverAuth", "clientAuth", "codeSigning", "emailProtection", "timeStamping", "OCSPSigning"],
+          "critical": true
+        },
+        "basicConstraints": {
+          "critical": true,
+          "CA": true
+        }
+      }
+    }
+  },
+  {
+    "name": "dev template 52",
+    "options": {
+      "hash": "sha256",
+      "days": 365,
+      "extensions": {
+        "authorityInfoAccess": {
+          "caIssuers": true,
+          "OCSP": true
+        },
+        "crlDistributionPoints": true,
+        "policies": true,
+        "keyUsage": {
+          "usages": ["digitalSignature", "keyEncipherment"],
+          "critical": true
+        },
+        "extendedKeyUsage": {
+          "usages": ["serverAuth", "clientAuth", "codeSigning", "emailProtection", "timeStamping", "OCSPSigning"],
+          "critical": true
+        },
+        "basicConstraints": {
+          "critical": true,
+          "CA": true
+        }
+      }
+    }
+  },
+  {
+    "name": "dev template 53",
+    "options": {
+      "hash": "sha256",
+      "days": 365,
+      "extensions": {
+        "authorityInfoAccess": {
+          "caIssuers": true,
+          "OCSP": true
+        },
+        "crlDistributionPoints": true,
+        "policies": true,
+        "keyUsage": {
+          "usages": ["digitalSignature", "keyEncipherment"],
+          "critical": true
+        },
+        "extendedKeyUsage": {
+          "usages": ["codeSigning", "emailProtection", "msCodeInd", "msCodeCom"]
+        },
+        "basicConstraints": {
+          "critical": true,
+          "CA": false
+        }
+      }
+    }
+  },
+  {
+    "name": "dev template 54",
+    "options": {
+      "hash": "sha256",
+      "days": 3650,
+      "extensions": {
+        "authorityInfoAccess": {
+          "caIssuers": true,
+          "OCSP": true
+        },
+        "crlDistributionPoints": true,
+        "policies": true,
+        "keyUsage": {
+          "usages": ["digitalSignature", "keyCertSign", "cRLSign"],
+          "critical": true
+        },
+        "extendedKeyUsage": {
+          "usages": ["serverAuth", "clientAuth", "timeStamping", "OCSPSigning"]
+        },
+        "basicConstraints": {
+          "critical": true,
+          "CA": true
+        }
+      }
+    }
+  },
+  {
+    "name": "dev template 55",
+    "options": {
+      "hash": "sha256",
+      "days": 3650,
+      "extensions": {
+        "authorityInfoAccess": {
+          "caIssuers": true,
+          "OCSP": true
+        },
+        "crlDistributionPoints": true,
+        "policies": true,
+        "keyUsage": {
+          "usages": ["digitalSignature", "keyCertSign", "cRLSign"],
+          "critical": true
+        },
+        "extendedKeyUsage": {
+          "usages": ["serverAuth", "clientAuth", "codeSigning", "emailProtection", "OCSPSigning"]
+        },
+        "basicConstraints": {
+          "critical": true,
+          "CA": true
+        }
+      }
+    }
+  },
+  {
+    "name": "dev template 56",
+    "options": {
+      "hash": "sha256",
+      "days": 5,
+      "extensions": {
+        "authorityInfoAccess": {
+          "caIssuers": true,
+          "OCSP": true
+        },
+        "crlDistributionPoints": true,
+        "policies": true,
+        "keyUsage": {
+          "usages": ["digitalSignature", "keyEncipherment"],
+          "critical": true
+        },
+        "extendedKeyUsage": {
+          "usages": ["serverAuth", "clientAuth"]
+        },
+        "basicConstraints": {
+          "critical": true,
+          "CA": false
+        }
+      }
+    }
+  },
+  {
+    "name": "dev template 57",
+    "options": {
+      "hash": "sha256",
+      "days": 397,
+      "extensions": {
+        "authorityInfoAccess": {
+          "caIssuers": true,
+          "OCSP": true
+        },
+        "crlDistributionPoints": true,
+        "policies": true,
+        "keyUsage": {
+          "usages": ["digitalSignature", "keyEncipherment"],
+          "critical": true
+        },
+        "extendedKeyUsage": {
+          "usages": ["serverAuth", "clientAuth"]
+        },
+        "basicConstraints": {
+          "critical": true,
+          "CA": false
+        }
+      }
+    }
+  },
+  {
+    "name": "dev template 58",
+    "options": {
+      "hash": "sha256",
+      "days": 1,
+      "extensions": {
+        "authorityInfoAccess": {
+          "caIssuers": true,
+          "OCSP": true
+        },
+        "crlDistributionPoints": true,
+        "policies": true,
+        "keyUsage": {
+          "usages": ["digitalSignature", "keyEncipherment"],
+          "critical": true
+        },
+        "extendedKeyUsage": {
+          "usages": ["serverAuth", "clientAuth"]
+        },
+        "basicConstraints": {
+          "critical": true,
+          "CA": false
+        }
+      }
+    }
+  },
+  {
+    "name": "dev template 59",
+    "options": {
+      "hash": "sha256",
+      "days": 365,
+      "extensions": {
+        "authorityInfoAccess": {
+          "caIssuers": true,
+          "OCSP": true
+        },
+        "crlDistributionPoints": true,
+        "policies": true,
+        "keyUsage": {
+          "usages": ["digitalSignature", "keyEncipherment", "dataEncipherment"],
+          "critical": true
+        },
+        "extendedKeyUsage": {
+          "usages": ["emailProtection"],
+          "critical": true
+        },
+        "basicConstraints": {
+          "critical": true,
+          "CA": false
+        }
+      }
+    }
+  },
+  {
+    "name": "dev template 60",
+    "options": {
+      "hash": "sha256",
+      "days": 3,
+      "extensions": {
+        "authorityInfoAccess": {
+          "caIssuers": true,
+          "OCSP": true
+        },
+        "crlDistributionPoints": true,
+        "policies": true,
+        "keyUsage": {
+          "usages": ["digitalSignature", "keyEncipherment"],
+          "critical": true
+        },
+        "extendedKeyUsage": {
+          "usages": ["serverAuth", "clientAuth"]
+        },
+        "basicConstraints": {
+          "critical": true,
+          "CA": false
+        }
+      }
+    }
+  },
+  {
+    "name": "dev template 61",
+    "options": {
+      "hash": "sha256",
+      "days": 3650,
+      "extensions": {
+        "authorityInfoAccess": {
+          "caIssuers": true,
+          "OCSP": true
+        },
+        "crlDistributionPoints": true,
+        "policies": true,
+        "keyUsage": {
+          "usages": ["digitalSignature", "keyCertSign", "cRLSign"],
+          "critical": true
+        },
+        "extendedKeyUsage": {
+          "usages": ["serverAuth", "clientAuth", "emailProtection", "OCSPSigning"]
+        },
+        "basicConstraints": {
+          "critical": true,
+          "CA": true,
+          "pathlen": 1
+        }
+      }
+    }
+  },
+  {
+    "name": "dev template 62",
+    "options": {
+      "hash": "sha256",
+      "days": 1825,
+      "extensions": {
+        "authorityInfoAccess": {
+          "caIssuers": true,
+          "OCSP": true
+        },
+        "crlDistributionPoints": true,
+        "policies": true,
+        "keyUsage": {
+          "usages": ["digitalSignature", "keyCertSign", "cRLSign"],
+          "critical": true
+        },
+        "extendedKeyUsage": {
+          "usages": ["serverAuth", "clientAuth", "emailProtection", "OCSPSigning"]
+        },
+        "basicConstraints": {
+          "critical": true,
+          "CA": true,
+          "pathlen": 1
+        }
+      }
+    }
+  },
+  {
+    "name": "dev template 63",
+    "options": {
+      "hash": "sha256",
+      "days": 365,
+      "extensions": {
+        "authorityInfoAccess": {
+          "caIssuers": {
+            "customURL": "http://aia1.example.net/issuer.crt"
+          },
+          "OCSP": true
+        },
+        "crlDistributionPoints": true,
+        "policies": true,
+        "keyUsage": {
+          "usages": ["digitalSignature", "keyEncipherment"],
+          "critical": true
+        },
+        "extendedKeyUsage": {
+          "usages": ["serverAuth", "clientAuth"]
+        },
+        "basicConstraints": {
+          "critical": true,
+          "CA": false
+        }
+      }
+    }
+  },
+  {
+    "name": "dev template 64",
+    "options": {
+      "hash": "sha256",
+      "days": 365,
+      "extensions": {
+        "authorityInfoAccess": {
+          "caIssuers": {
+            "customURL": "http://aia2.example.net/issuer.crt, http://aia3.example.net/issuer.crt"
+          },
+          "OCSP": true
+        },
+        "crlDistributionPoints": true,
+        "policies": true,
+        "keyUsage": {
+          "usages": ["digitalSignature", "keyEncipherment"],
+          "critical": true
+        },
+        "extendedKeyUsage": {
+          "usages": ["serverAuth", "clientAuth"]
+        },
+        "basicConstraints": {
+          "critical": true,
+          "CA": false
+        }
+      }
+    }
+  },
+  {
+    "name": "dev template 65",
+    "options": {
+      "hash": "sha256",
+      "days": 3650,
+      "extensions": {
+        "authorityInfoAccess": {
+          "caIssuers": true,
+          "OCSP": true
+        },
+        "crlDistributionPoints": true,
+        "policies": true,
+        "keyUsage": {
+          "usages": ["digitalSignature", "keyCertSign", "cRLSign"],
+          "critical": true
+        },
+        "extendedKeyUsage": {
+          "usages": ["serverAuth", "clientAuth", "emailProtection", "OCSPSigning"]
+        },
+        "basicConstraints": {
+          "critical": true,
+          "CA": true,
+          "pathlen": 0
+        }
+      }
+    }
+  },
+  {
+    "name": "dev template 66",
+    "options": {
+      "hash": "sha256",
+      "days": 5475,
+      "extensions": {
+        "authorityInfoAccess": {
+          "caIssuers": true,
+          "OCSP": true
+        },
+        "crlDistributionPoints": true,
+        "policies": true,
+        "keyUsage": {
+          "usages": ["digitalSignature", "keyCertSign", "cRLSign"],
+          "critical": true
+        },
+        "extendedKeyUsage": {
+          "usages": ["serverAuth", "clientAuth", "emailProtection", "OCSPSigning"],
+          "critical": true
+        },
+        "basicConstraints": {
+          "critical": true,
+          "CA": true,
+          "pathlen": 1
+        }
+      }
+    }
+  },
+  {
+    "name": "dev template 67",
+    "options": {
+      "hash": "sha256",
+      "days": 5475,
+      "extensions": {
+        "authorityInfoAccess": {
+          "caIssuers": true,
+          "OCSP": true
+        },
+        "crlDistributionPoints": true,
+        "policies": true,
+        "keyUsage": {
+          "usages": ["digitalSignature", "keyCertSign", "cRLSign"],
+          "critical": true
+        },
+        "extendedKeyUsage": {
+          "usages": ["serverAuth", "clientAuth", "emailProtection", "OCSPSigning"]
+        },
+        "basicConstraints": {
+          "critical": true,
+          "CA": true,
+          "pathlen": 0
+        }
+      }
+    }
+  },
+  {
+    "name": "dev template 68",
+    "options": {
+      "hash": "sha256",
+      "days": 14,
+      "subject": {
+        "countryName": [["US"]]
+      },
+      "extensions": {
+        "authorityInfoAccess": {
+          "caIssuers": true,
+          "OCSP": true
+        },
+        "crlDistributionPoints": true,
+        "policies": true,
+        "keyUsage": {
+          "usages": ["digitalSignature", "keyEncipherment"],
+          "critical": true
+        },
+        "extendedKeyUsage": {
+          "usages": ["serverAuth", "clientAuth"]
+        },
+        "basicConstraints": {
+          "critical": true,
+          "CA": false
+        }
+      }
+    }
+  },
+  {
+    "name": "dev template 69",
+    "options": {
+      "hash": "sha256",
+      "days": 5475,
+      "extensions": {
+        "authorityInfoAccess": {
+          "caIssuers": {
+            "customURL": "http://aia4.example.net/issuer.crt"
+          },
+          "OCSP": true
+        },
+        "crlDistributionPoints": true,
+        "policies": true,
+        "keyUsage": {
+          "usages": ["digitalSignature", "keyEncipherment", "keyCertSign", "cRLSign"],
+          "critical": true
+        },
+        "extendedKeyUsage": {
+          "usages": ["serverAuth", "clientAuth", "emailProtection", "OCSPSigning"]
+        },
+        "basicConstraints": {
+          "critical": true,
+          "CA": true,
+          "pathlen": 0
+        }
+      }
+    }
+  },
+  {
+    "name": "dev template 70",
+    "options": {
+      "hash": "sha256",
+      "days": 5475,
+      "extensions": {
+        "authorityInfoAccess": {
+          "caIssuers": {
+            "customURL": "http://aia5.example.net/issuer.crt"
+          },
+          "OCSP": true
+        },
+        "crlDistributionPoints": true,
+        "policies": true,
+        "keyUsage": {
+          "usages": ["digitalSignature", "keyEncipherment", "keyCertSign", "cRLSign"],
+          "critical": true
+        },
+        "extendedKeyUsage": {
+          "usages": ["serverAuth", "clientAuth", "emailProtection", "OCSPSigning"]
+        },
+        "basicConstraints": {
+          "critical": true,
+          "CA": true,
+          "pathlen": 0
+        }
+      }
+    }
+  },
+  {
+    "name": "dev template 71",
+    "options": {
+      "hash": "sha256",
+      "days": 10,
+      "extensions": {
+        "authorityInfoAccess": {
+          "caIssuers": true,
+          "OCSP": true
+        },
+        "crlDistributionPoints": true,
+        "policies": true,
+        "keyUsage": {
+          "usages": ["digitalSignature", "keyEncipherment"],
+          "critical": true
+        },
+        "extendedKeyUsage": {
+          "usages": ["serverAuth", "clientAuth"]
+        },
+        "basicConstraints": {
+          "critical": true,
+          "CA": false
+        }
+      }
+    }
+  },
+  {
+    "name": "dev template 72",
+    "options": {
+      "hash": "sha256",
+      "days": 3,
+      "subject": {
+        "countryName": [["US"]],
+        "organizationName": ["Example Org"]
+      },
+      "extensions": {
+        "authorityInfoAccess": {
+          "caIssuers": true,
+          "OCSP": true
+        },
+        "crlDistributionPoints": true,
+        "policies": true,
+        "keyUsage": {
+          "usages": ["digitalSignature", "keyEncipherment", "nonRepudiation"]
+        },
+        "extendedKeyUsage": {
+          "usages": ["clientAuth"]
+        },
+        "basicConstraints": {
+          "critical": true,
+          "CA": false
+        }
+      }
+    }
+  },
+  {
+    "name": "dev template 73",
+    "options": {
+      "hash": "sha256",
+      "days": 6935,
+      "extensions": {
+        "authorityInfoAccess": {
+          "caIssuers": true,
+          "OCSP": true
+        },
+        "crlDistributionPoints": true,
+        "policies": true,
+        "keyUsage": {
+          "usages": ["digitalSignature", "keyEncipherment", "keyCertSign", "cRLSign"],
+          "critical": true
+        },
+        "extendedKeyUsage": {
+          "usages": ["serverAuth", "clientAuth", "emailProtection", "OCSPSigning"]
+        },
+        "basicConstraints": {
+          "critical": true,
+          "CA": true
+        }
+      }
+    }
+  },
+  {
+    "name": "dev template 74",
+    "options": {
+      "hash": "sha256",
+      "days": 3650,
+      "extensions": {
+        "authorityInfoAccess": {
+          "caIssuers": true,
+          "OCSP": true
+        },
+        "crlDistributionPoints": true,
+        "policies": true,
+        "keyUsage": {
+          "usages": ["digitalSignature", "keyEncipherment", "keyCertSign", "cRLSign"],
+          "critical": true
+        },
+        "extendedKeyUsage": {
+          "usages": ["serverAuth", "clientAuth", "emailProtection", "OCSPSigning"]
+        },
+        "basicConstraints": {
+          "critical": true,
+          "CA": true,
+          "pathlen": 0
+        }
+      }
+    }
+  },
+  {
+    "name": "dev template 75",
+    "options": {
+      "hash": "sha256",
+      "days": 3650,
+      "extensions": {
+        "authorityInfoAccess": {
+          "caIssuers": true,
+          "OCSP": true
+        },
+        "crlDistributionPoints": true,
+        "policies": true,
+        "keyUsage": {
+          "usages": ["digitalSignature", "keyCertSign", "cRLSign"],
+          "critical": true
+        },
+        "extendedKeyUsage": {
+          "usages": ["serverAuth", "clientAuth"]
+        },
+        "basicConstraints": {
+          "critical": true,
+          "CA": true,
+          "pathlen": 0
+        }
+      }
+    }
+  },
+  {
+    "name": "dev template 76",
+    "options": {
+      "hash": "sha256",
+      "days": 10,
+      "extensions": {
+        "authorityInfoAccess": {
+          "caIssuers": true,
+          "OCSP": true
+        },
+        "crlDistributionPoints": true,
+        "policies": true,
+        "keyUsage": {
+          "usages": ["digitalSignature", "keyEncipherment"],
+          "critical": true
+        },
+        "extendedKeyUsage": {
+          "usages": ["serverAuth", "clientAuth"],
+          "critical": true
+        },
+        "basicConstraints": {
+          "critical": true,
+          "CA": false
+        }
+      }
+    }
+  },
+  {
+    "name": "dev template 77",
+    "options": {
+      "hash": "sha256",
+      "days": 30,
+      "extensions": {
+        "authorityInfoAccess": {
+          "caIssuers": true,
+          "OCSP": true
+        },
+        "crlDistributionPoints": true,
+        "policies": true,
+        "keyUsage": {
+          "usages": ["digitalSignature", "keyEncipherment"],
+          "critical": true
+        },
+        "extendedKeyUsage": {
+          "usages": ["serverAuth", "clientAuth"]
+        },
+        "basicConstraints": {
+          "critical": true,
+          "CA": false
+        }
+      }
+    }
+  },
+  {
+    "name": "dev template 78",
+    "options": {
+      "hash": "sha256",
+      "days": 30,
+      "extensions": {
+        "authorityInfoAccess": {
+          "caIssuers": true,
+          "OCSP": true
+        },
+        "crlDistributionPoints": true,
+        "policies": true,
+        "keyUsage": {
+          "usages": ["digitalSignature", "keyCertSign", "cRLSign"],
+          "critical": true
+        },
+        "extendedKeyUsage": {
+          "usages": []
+        },
+        "basicConstraints": {
+          "critical": true,
+          "CA": true,
+          "pathlen": 1
+        }
+      }
+    }
+  },
+  {
+    "name": "dev template 79",
+    "options": {
+      "hash": "sha256",
+      "days": 365,
+      "extensions": {
+        "authorityInfoAccess": {
+          "caIssuers": true,
+          "OCSP": true
+        },
+        "crlDistributionPoints": true,
+        "policies": true,
+        "keyUsage": {
+          "usages": ["digitalSignature", "keyEncipherment"],
+          "critical": true
+        },
+        "extendedKeyUsage": {
+          "usages": ["serverAuth", "clientAuth", "1.3.6.1.5.2.3.5", "1.3.6.1.4.1.311.54.1.2"]
+        },
+        "basicConstraints": {
+          "critical": true,
+          "CA": false
+        }
+      }
+    }
+  },
+  {
+    "name": "dev template 80",
+    "options": {
+      "hash": "sha256",
+      "days": 365,
+      "extensions": {
+        "authorityInfoAccess": {
+          "caIssuers": true,
+          "OCSP": true
+        },
+        "crlDistributionPoints": true,
+        "policies": true,
+        "keyUsage": {
+          "usages": ["digitalSignature", "keyEncipherment"],
+          "critical": true
+        },
+        "extendedKeyUsage": {
+          "usages": ["serverAuth", "clientAuth", "1.3.6.1.4.1.311.20.2.2", "1.3.6.1.5.2.3.5"]
+        },
+        "basicConstraints": {
+          "critical": true,
+          "CA": false
+        }
+      }
+    }
+  },
+  {
+    "name": "dev template 81",
+    "options": {
+      "hash": "sha256",
+      "days": 365,
+      "subject": {
+        "countryName": [["BR"]],
+        "stateOrProvinceName": ["Louisiana"],
+        "organizationName": ["Example Org"],
+        "organizationalUnitName": ["Example Unit"],
+        "localityName": ["New Orleans"]
+      },
+      "extensions": {
+        "authorityInfoAccess": {
+          "caIssuers": false,
+          "OCSP": false
+        },
+        "crlDistributionPoints": true,
+        "policies": true,
+        "keyUsage": {
+          "usages": ["digitalSignature", "keyEncipherment", "nonRepudiation", "dataEncipherment", "keyAgreement"],
+          "critical": true
+        },
+        "extendedKeyUsage": {
+          "usages": []
+        },
+        "basicConstraints": {
+          "critical": true,
+          "CA": false
+        }
+      }
+    }
+  },
+  {
+    "name": "dev template 82",
+    "options": {
+      "hash": "sha256",
+      "days": 7,
+      "extensions": {
+        "authorityInfoAccess": {
+          "caIssuers": true,
+          "OCSP": true
+        },
+        "crlDistributionPoints": true,
+        "policies": true,
+        "keyUsage": {
+          "usages": ["digitalSignature", "keyEncipherment"],
+          "critical": true
+        },
+        "extendedKeyUsage": {
+          "usages": ["serverAuth", "clientAuth"]
+        },
+        "basicConstraints": {
+          "critical": true,
+          "CA": false
+        }
+      }
+    }
+  },
+  {
+    "name": "dev template 83",
+    "options": {
+      "hash": "sha256",
+      "days": 15,
+      "extensions": {
+        "authorityInfoAccess": {
+          "caIssuers": true,
+          "OCSP": true
+        },
+        "crlDistributionPoints": true,
+        "policies": true,
+        "keyUsage": {
+          "usages": ["digitalSignature", "keyEncipherment"],
+          "critical": true
+        },
+        "extendedKeyUsage": {
+          "usages": ["serverAuth", "clientAuth"]
+        },
+        "basicConstraints": {
+          "critical": true,
+          "CA": false
+        }
+      }
+    }
+  }
+]

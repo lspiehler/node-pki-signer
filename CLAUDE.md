@@ -24,7 +24,7 @@ A library that signs X.509 certificates (and later CRLs, CSRs, OCSP and CMS) in-
 - Every failure says which step failed (e.g. "build TBS", "KMS asymmetricSign", "verify signature") so callers can log a meaningful message to the CA's log.
 
 ## Tests
-- `node:test`. Check every signing path against OpenSSL 3.5 (`openssl verify`, `openssl x509 -text`) and, for migrated functions, byte-for-byte against node-openssl-cert2's output with the serial and dates fixed (the differential harness).
+- `node:test`. Check every signing path against OpenSSL 3.5 (`openssl verify`, `openssl x509 -text`) and, for migrated functions, byte-for-byte against node-openssl-cert2's output with the serial and dates fixed (the differential harness in `test/differential/`, see `docs/differential-harness.md`). Add a corpus case for every input shape a caller can send.
 - Before committing, run `npm run typecheck`, `npm run lint`, `npm run format:check` and `npm test`.
 - CI runs on the user's self-hosted runners.
 
