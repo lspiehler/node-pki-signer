@@ -1,0 +1,29 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    # the user's self-hosted pool: fresh ubuntu:26.04 container per job, Node 24 and OpenSSL 3.5
+    runs-on: [self-hosted, linux, x64, pkiaas]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Versions
+        run: |
+          node --version
+          node -p "'bundled OpenSSL ' + process.versions.openssl"
+          openssl version
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm run format:check
+      - run: npm test
+      - run: npm run build

@@ -1,0 +1,14 @@
+{
+  // Emits the published package: JavaScript plus type declarations in dist/.
+  // Node won't strip types inside node_modules, so consumers get compiled JavaScript.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "allowImportingTsExtensions": false,
+    "rootDir": "src",
+    "outDir": "dist",
+    "declaration": true,
+    "sourceMap": true
+  },
+  "exclude": ["src/**/*.test.ts"]
+}
