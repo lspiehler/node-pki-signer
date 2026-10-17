@@ -9,6 +9,7 @@ export type Outcome =
   | { kind: 'one rejected'; reference: string; candidate: string; candidatePEM?: string }
   | {
       kind: 'both signed';
+      referencePEM: string;
       candidatePEM: string;
       differences: Difference[];
       text: string[];
@@ -47,6 +48,7 @@ export async function differential(params: SignParams, candidate: Signer, sequen
   ]);
   return {
     kind: 'both signed',
+    referencePEM: ref.pem,
     candidatePEM: cand.pem,
     differences: compareCertificates(ref.pem, cand.pem),
     text,
