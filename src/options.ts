@@ -8,8 +8,23 @@ export interface SignParams {
   /** issuer private key, PEM (encrypted PKCS#8 in PKIaaS.io) */
   key: string;
   password?: string;
-  /** the agent's PKCS#11 key; not signed natively yet */
-  pkcs11?: unknown;
+  /** a key on a PKCS#11 token instead of `key`, as the IoT HSM agent passes it */
+  pkcs11?: Pkcs11KeyRef | false | null;
+  /**
+   * a Google Cloud KMS key, signed with the KMS API (ADR 0003). The agent passes it beside `pkcs11`
+   * (libkmsp11), which the OpenSSL fallback keeps using.
+   */
+  kms?: { keyVersion: string } | null;
+}
+
+/** A private key on a PKCS#11 token. */
+export interface Pkcs11KeyRef {
+  /** RFC 7512 URI, e.g. `pkcs11:serial=0123;id=%01;type=private` */
+  uri: string;
+  /** the user PIN */
+  pin?: string;
+  /** the PKCS#11 module, e.g. /usr/lib/x86_64-linux-gnu/libykcs11.so */
+  modulePath: string;
 }
 
 /** The options object pkiaas builds in lib/template/processTemplate.js. */
@@ -22,6 +37,8 @@ export interface SignOptions {
   enddate?: Date | string | number;
   /** validity from now when there is no startdate; 365 by default */
   days?: number;
+  /** the PKCS#11 module node-openssl-cert2 loads through pkcs11-provider; the agent sets it beside `pkcs11` */
+  module?: string;
 }
 
 export interface SignResult {

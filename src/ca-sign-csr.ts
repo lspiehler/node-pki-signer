@@ -16,15 +16,14 @@ import {
   id_ce_subjectKeyIdentifier,
 } from '@peculiar/asn1-x509';
 import * as asn1js from 'asn1js';
-import { X509Certificate, createHash, createPublicKey, randomBytes, verify } from 'node:crypto';
+import { X509Certificate, createHash, createPublicKey, randomBytes, verify, type KeyObject } from 'node:crypto';
 import { promisify } from 'node:util';
 import { algorithmIdentifier, verifyHash } from './algorithms.ts';
-import { checkAllowlist } from './allowlist.ts';
 import { SignerError, UnsupportedError } from './errors.ts';
 import { buildExtensions } from './extensions.ts';
+import { selectKey, type KeySettings } from './keys.ts';
 import type { SignParams, SignResult } from './options.ts';
 import type { SigningKey } from './signing-key.ts';
-import { softwareKey } from './software-key.ts';
 import { buildSubject } from './subject.ts';
 
 const verifyAsync = promisify(verify);
@@ -122,9 +121,21 @@ function randomSerial(): { content: ArrayBuffer; hex: string } {
 }
 
 /** Signs a TBS certificate with `key` and returns the certificate DER. */
-async function signTBS(tbs: TBSCertificate, key: SigningKey): Promise<ArrayBuffer> {
+async function signTBS(tbs: TBSCertificate, key: SigningKey, issuerKey: KeyObject): Promise<ArrayBuffer> {
   const tbsDER = AsnConvert.serialize(tbs);
   const signature = await key.sign(new Uint8Array(tbsDER));
+  // a token, KMS or openssl signs with a key we never see, so check it's the CA's (ADR 0003)
+  if (key.backend !== 'software') {
+    let verified: boolean;
+    try {
+      verified = await verifyAsync(verifyHash(tbs.signature.algorithm), new Uint8Array(tbsDER), issuerKey, signature);
+    } catch (err) {
+      throw new SignerError('verify signature', err instanceof Error ? err.message : String(err));
+    }
+    if (!verified) {
+      throw new SignerError('verify signature', `the ${key.backend} key doesn't match the CA certificate`);
+    }
+  }
   return AsnConvert.serialize(
     new Certificate({
       tbsCertificate: tbs,
@@ -134,22 +145,17 @@ async function signTBS(tbs: TBSCertificate, key: SigningKey): Promise<ArrayBuffe
   );
 }
 
-export interface NativeSettings {
-  /** signature algorithms to leave to OpenSSL even though they're allowlisted, e.g. 'ML-DSA-65' */
-  forceOpenSSL?: readonly string[];
-}
+export type NativeSettings = KeySettings;
 
 /**
  * Signs a CSR with a CA, taking the same parameters as node-openssl-cert2's x509.CASignCSR and
  * returning its `data` and `serial`. Throws UnsupportedError for what must go to OpenSSL instead.
  */
 export async function caSignCSR(params: SignParams, settings: NativeSettings = {}): Promise<SignResult> {
-  if (params.pkcs11) throw new UnsupportedError('load CA key', 'PKCS#11 keys');
   const options = params.options;
   const info = await parseCSR(params.csr);
   const issuer = parseIssuer(params.ca);
-  const key = softwareKey(params.key, params.password, options.hash ?? 'sha256');
-  checkAllowlist(key, settings.forceOpenSSL);
+  const key = await selectKey(params, issuer.publicKey, settings);
   const caPublicKey = issuer.publicKey.export({ type: 'spki', format: 'der' });
   if (!equal(await key.publicKey(), caPublicKey)) {
     throw new SignerError('load CA key', "the CA certificate and private key don't match");
@@ -196,5 +202,5 @@ export async function caSignCSR(params: SignParams, settings: NativeSettings = {
     if (err instanceof SignerError) throw err;
     throw new SignerError('build TBS', err instanceof Error ? err.message : String(err));
   }
-  return { data: derToPEM(await signTBS(tbs, key), 'CERTIFICATE'), serial: serial.hex };
+  return { data: derToPEM(await signTBS(tbs, key, issuer.publicKey), 'CERTIFICATE'), serial: serial.hex };
 }

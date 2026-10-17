@@ -21,6 +21,11 @@ jobs:
           node --version
           node -p "'bundled OpenSSL ' + process.versions.openssl"
           openssl version
+      # SoftHSM and pkcs11-provider for the PKCS#11 backends' tests; python3 for building pkcs11js
+      - name: PKCS#11 test tools
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q --no-install-recommends python3 softhsm2 pkcs11-provider
       - run: npm ci
       - run: npm run typecheck
       - run: npm run lint

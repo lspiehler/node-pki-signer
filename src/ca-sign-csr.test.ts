@@ -89,9 +89,16 @@ describe('caSignCSR', () => {
     await assert.rejects(caSignCSR(params({ extensions: { nameConstraints: {} } })), failsAt('build extensions'));
   });
 
-  test('leaves PKCS#11 keys to OpenSSL', async () => {
+  test('leaves PKCS#11 keys to OpenSSL without PKCS#11 sessions', async () => {
     await assert.rejects(
-      caSignCSR({ ...params(), pkcs11: { uri: 'pkcs11:' } }),
+      caSignCSR({ ...params(), pkcs11: { uri: 'pkcs11:', modulePath: '/nonexistent.so' } }, { backends: ['pkcs11'] }),
+      failsAt('load CA key', UnsupportedError),
+    );
+  });
+
+  test('leaves libkmsp11 keys without a key version to OpenSSL', async () => {
+    await assert.rejects(
+      caSignCSR({ ...params(), pkcs11: { uri: 'pkcs11:object=k', modulePath: '/usr/lib/kms/libkmsp11.so' } }),
       failsAt('load CA key', UnsupportedError),
     );
   });

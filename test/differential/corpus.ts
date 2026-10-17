@@ -163,14 +163,19 @@ const hashes = ['sha1', 'sha256', 'sha384', 'sha512'];
  */
 export const caHashes = (spec: KeySpec) => (spec.pqc ? ['default', 'sha256'] : hashes);
 
+/** Every CA key type with every hash: the cases each key backend is checked with. */
+export const caKeyCases: (CorpusCase & { spec: KeySpec; hash: string })[] = caKeySpecs.flatMap((spec) =>
+  caHashes(spec).map((hash) => ({
+    spec,
+    hash,
+    ...corpusCase({ name: `CA ${spec.name} ${hash}`, ca: spec.name, template: withHash(webServer.options, hash) }),
+  })),
+);
+
 export const corpus: CorpusCase[] = [
   ...templates.map((t) => corpusCase({ name: `template ${t.name}`, template: t.options })),
 
-  ...caKeySpecs.flatMap((spec) =>
-    caHashes(spec).map((hash) =>
-      corpusCase({ name: `CA ${spec.name} ${hash}`, ca: spec.name, template: withHash(webServer.options, hash) }),
-    ),
-  ),
+  ...caKeyCases,
 
   corpusCase({
     name: 'CSR ACME (empty subject, SANs only)',

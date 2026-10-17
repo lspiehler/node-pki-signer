@@ -18,7 +18,12 @@ export const referenceSigner: Signer = (params) =>
     // CASignCSR fills in defaults on the options object, so give it a copy
     const options = structuredClone(params.options);
     openssl2.x509.CASignCSR({ ...params, options }, (err, result) => {
-      if (err || !result || !result.data) {
+      // with PKCS#11 keys, openssl ca can crash unloading the module after it wrote the certificate
+      // (pkcs11-provider with SoftHSM; the agent retries libkmsp11's): the certificate is what counts
+      const data = result ? result.data : null;
+      if (params.pkcs11 && String(err).includes('SIGSEGV') && data?.includes('-----END CERTIFICATE-----')) {
+        resolve(data);
+      } else if (err || !result || !result.data) {
         reject(new Error(`reference CASignCSR: ${err ? message(err) : 'no certificate'}`));
       } else {
         resolve(result.data);
