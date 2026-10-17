@@ -14,7 +14,7 @@ Status: early development, not yet published.
 |---|---|---|
 | `key` (PEM) | node:crypto, then `openssl dgst` | every CA key type and hash |
 | `pkcs11: { uri, pin, modulePath }` | pkcs11js, then `openssl dgst` with pkcs11-provider | RSA and ECDSA |
-| `kms: { keyVersion }` | the Google Cloud KMS API | nothing yet: needs a test against real KMS |
+| `kms: { keyVersion }` | the Google Cloud KMS API | RSA with SHA-256 (tested against a real KMS key) |
 
 Non-software signatures are verified against the CA certificate before the certificate is returned. pkcs11js and @google-cloud/kms are optional dependencies, loaded only when needed.
 

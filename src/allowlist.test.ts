@@ -27,7 +27,7 @@ for (const [backend, specs] of Object.entries(backendSpecs)) {
   });
 }
 
-test('allowlists nothing for KMS until it is tested against the real service', () => {
-  assert.equal(allowlisted('kms').size, 0);
+test('allowlists for KMS only what passed against the real service', () => {
+  assert.deepEqual([...allowlisted('kms')], ['sha256WithRSAEncryption']);
   assert.equal(allowlisted('unknown').size, 0);
 });
