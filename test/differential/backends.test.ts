@@ -63,12 +63,14 @@ describe('differential: PKCS#11 backends', { skip }, () => {
     return { ...params, key: '', password: '', options: { ...params.options, module: ref.modulePath }, pkcs11: ref };
   }
 
+  // one case at a time and the reference first: several processes using a SoftHSM token at once
+  // sometimes don't find its keys (ADR 0003)
   for (const backend of ['pkcs11', 'openssl-pkcs11']) {
-    describe(backend, { concurrency }, () => {
+    describe(backend, () => {
       for (const c of caKeyCases.filter((c) => backendSpecs[backend]!.includes(c.spec))) {
         test(c.name, async () => {
           const params = await onToken(await c.build());
-          assertSame(await differential(params, native({ backends: [backend], pkcs11: sessions })));
+          assertSame(await differential(params, native({ backends: [backend], pkcs11: sessions }), true));
         });
       }
     });
