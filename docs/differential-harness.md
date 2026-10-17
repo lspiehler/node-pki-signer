@@ -1,6 +1,6 @@
 # Differential harness
 
-Phase 0 of ADR 0001. The harness proves that a new signing path issues the same certificates as today's: node-openssl-cert2 `x509.CASignCSR` 0.7.34, which pkiaas master runs. It signs every corpus case with both paths and compares the results.
+Phase 0 of ADR 0001. The harness proves that a new signing path issues the same certificates as today's: node-openssl-cert2 `x509.CASignCSR` 0.7.34, which pkiaas master runs. It signs every corpus case with both paths and compares the results. The candidate is the library's native signer, `caSignCSR` (phase 1).
 
 Run it with `npm test`, or only the harness with `node --test test/differential/differential.test.ts` (about 15 seconds). It needs the system `openssl` 3.5 or later, because the reference path calls it.
 
@@ -11,8 +11,11 @@ For each case, with the validity dates fixed by the options:
 - **Signature value:** not compared, because ECDSA and ML-DSA signatures are randomized. Both certificates must pass `openssl verify` against the issuing CA instead. CT precertificates are verified with `-ignore_critical` because of the poison extension.
 - **`openssl x509 -text`:** the same, apart from the serial number and signature value.
 - **Refusals:** if the reference refuses a case, the candidate must refuse it too (`referenceRejects`).
+- **Intended differences (ADR 0002):** for the cases in `fullSubjects`, the reference truncates, empties or refuses the subject. The candidate must issue the full subject listed there, and nothing else may differ.
 
-Until the native path exists, the candidate is the reference itself. That shows the corpus and the comparison are deterministic. The harness's own tests check that it reports a missing extension, a changed validity and a refusal.
+In phase 0 the candidate was the reference itself, which showed that the corpus and the comparison are deterministic. The harness's own tests check that it reports a missing extension, a changed validity and a refusal.
+
+The native signer's own tests (`src/ca-sign-csr.test.ts`) cover what the harness can't: dates in a time zone that isn't UTC, `days` without a `startdate`, and each refusal naming its step.
 
 ## Corpus (`test/differential/corpus.ts`)
 Options are built the way pkiaas builds them: the CSR goes through node-openssl-cert2's `csr.parse`, then through a copy of pkiaas's `processOptions` (`pkiaas-options.ts`, from `lib/template/processTemplate.js`). Keys, CAs and CSRs are generated on each run.
@@ -27,26 +30,31 @@ Options are built the way pkiaas builds them: the CSR goes through node-openssl-
   - multi-valued and less common attributes
   - every SAN type
   - every subject key type, Ed25519 included
+  - must-staple (the TLS feature extension, which `csr.parse` passes through)
 - **Other signing paths:**
-  - admin overrides, including awkward subject values
+  - admin overrides, including awkward subject values and every subject attribute
+  - options without a subject, which keep the CSR's subject
   - the legacy `/admin` sign path (`lib/admin/ca/signcert.js`)
   - CT precertificates and final certificates with an SCT list
   - OCSP, timestamping and SCEP RA service certificates
 
 ## What the reference does today
-Phase 1 must reproduce these, or an ADR must record the intended difference:
+The native signer reproduces these. The intended differences are in ADR 0002.
 - **Extension order:**
   - Subject Key Identifier and Authority Key Identifier (key ID only) come first.
   - The rest follow the key order of `options.extensions`. `customOIDs` (template OID, CT poison, SCT list) sit wherever that key is.
   - Subject Alternative Name always comes last.
-- **String types:** `-utf8` with the default `string_mask`, so country is PrintableString, emailAddress and domainComponent are IA5String, and everything else is UTF8String. The subject is always forced from `options.subject`, in that order (`preserve = yes`). The CSR's own subject and extensions are never copied.
+- **String types:** `-utf8` with the default `string_mask`, so country, serialNumber and dnQualifier are PrintableString, emailAddress and domainComponent are IA5String, and everything else is UTF8String.
+- **Subject:** forced from `options.subject` when the options have one. If they don't, the CSR's subject is kept. The CSR's extensions are never copied.
+- **Subject order:** the order of node-openssl-cert2's `signing_policy` (C, ST, L, postalCode, street, O, OU, CN, emailAddress, …), not the order given. Its config sets `preserve = yes`, but `openssl ca` still applies the policy order. Phase 0 missed this because its candidate was the reference.
 - **PQC digest:** with ML-DSA and SLH-DSA CAs, `sha256` gives the same certificate as `default`. OpenSSL ignores the digest.
 - **Empty usages:** SCEP RA certificates with empty key usage and extended key usage lists get neither extension.
 - **Custom AIA URLs:** `"a, b"` gives two URIs, with the space trimmed.
 - **MS CES template OID:** the leading-space form (`' 1.3.6.1.4.1.311.21.7'`) is accepted.
 
 ## Quirks found
-These are flagged, not decided:
+Quirks 1, 3 and 4 are fixed in the native signer (ADR 0002). Quirk 2 is pkiaas's to fix.
 1. **Subjects are silently truncated.** `getDistinguishedName` builds `-subj` escaping only spaces. A `/` or `+` in a subject value cuts the subject at that point, and every later attribute is lost, including the common name. For example, `O=Ops/Infra, CN=host` is issued as `O=Ops`. A backslash disappears. Values can reach `-subj` from templates, admin overrides or CSRs.
 2. **`csr.parse` mangles subjects, and the result depends on attribute order.** `CN=a, b` becomes `a`. `O=Ops/Infra` becomes `Ops, Infra`. Quotes are stripped. A CSR with `=` in a value is refused (`Invalid subject: undefined`), and so is one with an escaped `+` (the `-subj` problem above). This happens in pkiaas before signing, so it's outside this library, but it shapes what the library is given.
 3. **Validity dates depend on the host's time zone.** `CASignCSR` formats `-startdate`/`-enddate` in local time and appends `Z`. On a host that isn't on UTC, `notBefore` and `notAfter` shift by the UTC offset: in Asia/Tokyo, certificates aren't valid until 9 hours after issue. pkiaas containers and both IoT HSM installs (the Docker image's `TZ=UTC`, and `setup_ubuntu.sh`'s `timedatectl set-timezone UTC`) run on UTC, so only agents whose time zone was changed are affected. The harness pins `TZ=UTC`.
+4. **Nested subject arrays empty the subject.** The pkiaas template editor can save `countryName: [["US"]]` (10 of the 87 template shapes on dev). `getDistinguishedName` throws on it and falls back to `-subj /`, or keeps only the attributes before the nested one. Certificates from these templates have an empty or partial subject, without the CSR's common name.

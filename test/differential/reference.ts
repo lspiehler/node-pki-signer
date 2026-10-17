@@ -1,31 +1,14 @@
 // The reference signing path: node-openssl-cert2's x509.CASignCSR, exactly as PKIaaS.io and the
 // IoT HSM agent call it today (one `openssl ca` process per certificate).
 import NodeOpenSSL from 'node-openssl-cert2';
+import type { SignOptions, SignParams } from '../../src/options.ts';
 
 const openssl2 = new NodeOpenSSL();
 
 const message = (err: string | Error) => (err instanceof Error ? err.message : err.trim());
 
-/** The parameters pkiaas passes to x509.CASignCSR (lib/ca/signCSR.js) and a candidate must accept. */
-export interface SignParams {
-  csr: string;
-  options: SignOptions;
-  /** issuer certificate, PEM */
-  ca: string;
-  /** issuer private key, encrypted PKCS#8 PEM */
-  key: string;
-  password: string;
-}
-
-/** The options object pkiaas builds in lib/template/processTemplate.js; see pkiaas-options.ts. */
-export interface SignOptions {
-  hash?: string;
-  subject?: Record<string, string | string[]> | false | null;
-  extensions?: Record<string, unknown>;
-  startdate?: Date;
-  enddate?: Date;
-  days?: number;
-}
+// the parameters pkiaas passes to x509.CASignCSR (lib/ca/signCSR.js), which a candidate must accept
+export type { SignOptions, SignParams } from '../../src/options.ts';
 
 /** Signs a CSR and returns the certificate PEM, like `crt.data` in pkiaas. */
 export type Signer = (params: SignParams) => Promise<string>;

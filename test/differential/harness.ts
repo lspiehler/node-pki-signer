@@ -6,9 +6,10 @@ const ctPoison = '1.3.6.1.4.1.11129.2.4.3';
 
 export type Outcome =
   | { kind: 'both rejected'; reference: string; candidate: string }
-  | { kind: 'one rejected'; reference: string; candidate: string }
+  | { kind: 'one rejected'; reference: string; candidate: string; candidatePEM?: string }
   | {
       kind: 'both signed';
+      candidatePEM: string;
       differences: Difference[];
       text: string[];
       /** `openssl verify` errors, if any */
@@ -31,6 +32,7 @@ export async function differential(params: SignParams, candidate: Signer): Promi
       kind: 'error' in ref && 'error' in cand ? 'both rejected' : 'one rejected',
       reference: describe(ref),
       candidate: describe(cand),
+      ...('pem' in cand ? { candidatePEM: cand.pem } : {}),
     };
   }
   const customOIDs = (params.options.extensions?.customOIDs ?? []) as { OID: string }[];
@@ -42,6 +44,7 @@ export async function differential(params: SignParams, candidate: Signer): Promi
   ]);
   return {
     kind: 'both signed',
+    candidatePEM: cand.pem,
     differences: compareCertificates(ref.pem, cand.pem),
     text,
     verify: { reference: verifyRef, candidate: verifyCand },
