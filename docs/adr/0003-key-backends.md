@@ -31,7 +31,7 @@ When no backend is allowlisted, or none can load (e.g. pkcs11js isn't installed)
 - `kms`: nothing yet. The harness checks the requests and signatures against a stand-in client, not Google's service; KMS is allowlisted after a test against a real key.
 - **Update 2026-10-17:** `kms` allowlists `sha256WithRSAEncryption`, the only algorithm tested against Google's service so far (`test/live/kms.test.ts` with an HSM `RSA_SIGN_PKCS1_2048_SHA256` key: same TBS and text as libkmsp11, KMS refusals passed on, a wrong CA key caught, about 110 ms per certificate against about 1.8 s). Other KMS algorithms stay off the allowlist until the live test passes with a key of that kind.
 
-**Dependencies:** pkcs11js 2.1.7 and @google-cloud/kms 6.2.1 are optional dependencies, loaded only when a key needs them. pkcs11js compiles at install (node-gyp: python3, make, a C++ compiler); if it can't, PKCS#11 keys go to OpenSSL.
+**Dependencies:** pkcs11js 2.1.7 and @google-cloud/kms 6.2.1 are optional dependencies, loaded only when a key needs them. pkcs11js compiles at install (node-gyp: python3, make, a C++ compiler); if it can't, PKCS#11 keys go to OpenSSL. **Update 2026-10-17 (0.3.0):** both are optional *peer* dependencies instead, so npm installs them only where the application asks for them. PKIaaS.io, which signs only software keys natively, installs neither: the KMS client brought about 45 packages, some newer than the 14-day rule allows, plus pkcs11js's failed native build in an image without a compiler. The IoT HSM agent lists them in its own dependencies.
 
 ## Consequences
 - **Speed:** on SoftHSM, a certificate takes about 4 ms with pkcs11js against about 100 ms through `openssl ca` (`openssl dgst` with pkcs11-provider: also about 100 ms, the module load).
