@@ -147,25 +147,32 @@ async function signTBS(tbs: TBSCertificate, key: SigningKey, issuerKey: KeyObjec
 
 export type NativeSettings = KeySettings;
 
-/**
- * Signs a CSR with a CA, taking the same parameters as node-openssl-cert2's x509.CASignCSR and
- * returning its `data` and `serial`. Throws UnsupportedError for what must go to OpenSSL instead.
- */
-export async function caSignCSR(params: SignParams, settings: NativeSettings = {}): Promise<SignResult> {
-  const options = params.options;
-  const info = await parseCSR(params.csr);
-  const issuer = parseIssuer(params.ca);
-  const key = await selectKey(params, issuer.publicKey, settings);
-  const caPublicKey = issuer.publicKey.export({ type: 'spki', format: 'der' });
-  if (!equal(await key.publicKey(), caPublicKey)) {
-    throw new SignerError('load CA key', "the CA certificate and private key don't match");
-  }
+type CSRInfo = Awaited<ReturnType<typeof parseCSR>>;
+type Issuer = ReturnType<typeof parseIssuer>;
 
+/** Parses and checks the CSR and the CA certificate. */
+export async function parseRequest(params: SignParams): Promise<{ info: CSRInfo; issuer: Issuer }> {
+  return { info: await parseCSR(params.csr), issuer: parseIssuer(params.ca) };
+}
+
+/** The validity from the options: startdate to enddate, or `days` from now without a startdate. */
+export function validity(options: SignParams['options']): Validity {
   const startdate = options.startdate ? date(options.startdate, 'startdate') : date(undefined, 'startdate');
   const enddate = options.startdate
     ? date(options.enddate, 'enddate')
     : new Date(startdate.getTime() + (options.days ?? 365) * day);
+  return new Validity({ notBefore: startdate, notAfter: enddate });
+}
 
+/** The TBS certificate `openssl ca` would build for this request, with the given serial and validity. */
+export function buildTBS(
+  params: SignParams,
+  { info, issuer }: { info: CSRInfo; issuer: Issuer },
+  algorithm: string,
+  serial: ArrayBuffer,
+  dates: Validity,
+): TBSCertificate {
+  const options = params.options;
   const spki = info.subjectPKInfo;
   const subjectKeyIdentifier = createHash('sha1').update(new Uint8Array(spki.subjectPublicKey)).digest();
   const extensions = [
@@ -184,15 +191,13 @@ export async function caSignCSR(params: SignParams, settings: NativeSettings = {
     ...buildExtensions(options.extensions),
   ];
 
-  const serial = randomSerial();
-  let tbs: TBSCertificate;
   try {
-    tbs = new TBSCertificate({
+    return new TBSCertificate({
       version: Version.v3,
-      serialNumber: serial.content,
-      signature: algorithmIdentifier(key.algorithm),
+      serialNumber: serial,
+      signature: algorithmIdentifier(algorithm),
       issuer: issuer.subject,
-      validity: new Validity({ notBefore: startdate, notAfter: enddate }),
+      validity: dates,
       // the subject is forced from the options when they have one (`-subj`); the CSR's extensions are never copied
       subject: Object.hasOwn(options, 'subject') ? buildSubject(options.subject) : info.subject,
       subjectPublicKeyInfo: spki,
@@ -202,5 +207,22 @@ export async function caSignCSR(params: SignParams, settings: NativeSettings = {
     if (err instanceof SignerError) throw err;
     throw new SignerError('build TBS', err instanceof Error ? err.message : String(err));
   }
+}
+
+/**
+ * Signs a CSR with a CA, taking the same parameters as node-openssl-cert2's x509.CASignCSR and
+ * returning its `data` and `serial`. Throws UnsupportedError for what must go to OpenSSL instead.
+ */
+export async function caSignCSR(params: SignParams, settings: NativeSettings = {}): Promise<SignResult> {
+  const request = await parseRequest(params);
+  const { issuer } = request;
+  const key = await selectKey(params, issuer.publicKey, settings);
+  const caPublicKey = issuer.publicKey.export({ type: 'spki', format: 'der' });
+  if (!equal(await key.publicKey(), caPublicKey)) {
+    throw new SignerError('load CA key', "the CA certificate and private key don't match");
+  }
+  const dates = validity(params.options);
+  const serial = randomSerial();
+  const tbs = buildTBS(params, request, key.algorithm, serial.content, dates);
   return { data: derToPEM(await signTBS(tbs, key, issuer.publicKey), 'CERTIFICATE'), serial: serial.hex };
 }

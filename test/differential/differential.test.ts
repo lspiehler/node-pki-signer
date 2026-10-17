@@ -5,6 +5,7 @@ import assert from 'node:assert/strict';
 import { X509Certificate } from 'node:crypto';
 import { availableParallelism } from 'node:os';
 import { describe, test } from 'node:test';
+import { shadowCASignCSR } from '../../src/index.ts';
 import { corpus } from './corpus.ts';
 import { differential } from './harness.ts';
 import { nativeSigner } from './native.ts';
@@ -45,7 +46,8 @@ const candidate: Signer = nativeSigner;
 describe('differential: reference against candidate', { concurrency: availableParallelism() }, () => {
   for (const c of corpus) {
     test(c.name, async () => {
-      const outcome = await differential(await c.build(), candidate);
+      const params = await c.build();
+      const outcome = await differential(params, candidate);
       if (referenceRejects.has(c.name)) {
         assert.equal(outcome.kind, 'both rejected', JSON.stringify(outcome));
         return;
@@ -68,6 +70,13 @@ describe('differential: reference against candidate', { concurrency: availablePa
         'openssl x509 -text differs',
       );
       assert.deepEqual(outcome.verify, { reference: undefined, candidate: undefined }, 'openssl verify');
+      // shadow mode rebuilds the reference's TBS exactly, apart from the same intended differences
+      const shadow = await shadowCASignCSR(params, outcome.referencePEM);
+      if (fullSubject !== undefined) {
+        assert.deepEqual(shadow, { outcome: 'differ', algorithm: shadow.algorithm, fields: ['subject'] }, 'shadow');
+      } else {
+        assert.equal(shadow.outcome, 'match', JSON.stringify(shadow));
+      }
     });
   }
 });

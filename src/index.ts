@@ -5,6 +5,7 @@ export { createKmsClient, kmsKey, type KmsClient } from './kms-key.ts';
 export { opensslKey, type OpenSSLKeySource } from './openssl-key.ts';
 export type { Pkcs11KeyRef, SignOptions, SignParams, SignResult } from './options.ts';
 export { Pkcs11Sessions } from './pkcs11-key.ts';
+export { shadowCASignCSR, type ShadowResult } from './shadow.ts';
 export {
   createSigner,
   type CASignCSRResult,
