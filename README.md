@@ -16,7 +16,7 @@ Status: early development (0.x): the API may still change. PKIaaS.io runs it in 
 | `pkcs11: { uri, pin, modulePath }` | pkcs11js, then `openssl dgst` with pkcs11-provider | RSA and ECDSA |
 | `kms: { keyVersion }` | the Google Cloud KMS API | RSA with SHA-256 (tested against a real KMS key) |
 
-Non-software signatures are verified against the CA certificate before the certificate is returned. pkcs11js and @google-cloud/kms are optional dependencies, loaded only when needed.
+Non-software signatures are verified against the CA certificate before the certificate is returned. pkcs11js and @google-cloud/kms are optional peer dependencies, loaded only when needed: install them beside this package to sign with PKCS#11 tokens (`npm install pkcs11js`) or Google Cloud KMS (`npm install @google-cloud/kms`). Without them, those keys go to OpenSSL.
 
 ```js
 const { createSigner } = require('node-pki-signer');
