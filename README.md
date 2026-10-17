@@ -8,7 +8,15 @@ Status: early development, not yet published.
 
 ## Usage
 
-`createSigner` is a drop-in for node-openssl-cert2's `x509.CASignCSR`: same parameters, same callback. It signs natively when the CA's signature algorithm is on the allowlist (`src/allowlist.ts`: software keys with every algorithm the differential harness covers) and hands the whole request to node-openssl-cert2 otherwise.
+`createSigner` is a drop-in for node-openssl-cert2's `x509.CASignCSR`: same parameters, same callback. It signs natively when the CA's signature algorithm is on the allowlist for a backend that can reach the key (`src/allowlist.ts`, ADR 0003) and hands the whole request to node-openssl-cert2 otherwise:
+
+| Key | Backends, preferred first | Allowlisted |
+|---|---|---|
+| `key` (PEM) | node:crypto, then `openssl dgst` | every CA key type and hash |
+| `pkcs11: { uri, pin, modulePath }` | pkcs11js, then `openssl dgst` with pkcs11-provider | RSA and ECDSA |
+| `kms: { keyVersion }` | the Google Cloud KMS API | nothing yet: needs a test against real KMS |
+
+Non-software signatures are verified against the CA certificate before the certificate is returned. pkcs11js and @google-cloud/kms are optional dependencies, loaded only when needed.
 
 ```js
 const { createSigner } = require('node-pki-signer');
@@ -18,6 +26,8 @@ const signer = createSigner({
   binpath: '/usr/bin/openssl',
   // optional: algorithms that always go to OpenSSL, or true for all of them
   forceOpenSSL: ['ML-DSA-65'],
+  // optional: the backends that may sign natively; all by default
+  backends: ['software', 'openssl', 'pkcs11', 'openssl-pkcs11', 'kms'],
   // every fallback with its reason; a console.warn by default
   onFallback: (fallback) => log.logEvent(`${fallback.operation} fell back to OpenSSL: ${fallback.reason}`),
 });
@@ -30,8 +40,8 @@ signer.x509.CASignCSR({ csr, options, ca, key, password }, (err, crt) => {
 
 What falls back:
 
-- **Not supported natively** (`UnsupportedError`): PKCS#11 keys, hashes and key types outside the allowlist, a CA certificate the library can't re-encode exactly.
+- **Not supported natively** (`UnsupportedError`): hashes and key types outside the allowlist, libkmsp11 keys without `kms.keyVersion`, a missing pkcs11js or @google-cloud/kms, a CA certificate the library can't re-encode exactly.
 - **Forced** by `forceOpenSSL`.
 - **Unexpected errors** in the native path, so a bug there doesn't stop issuance.
 
-A refusal of the request itself (`SignerError`: wrong passphrase, a CSR whose signature doesn't verify, a subject OpenSSL would refuse) doesn't fall back, because OpenSSL refuses it too. Fallback reasons never contain keys, passphrases, PINs or CSRs. Requests that fall back get node-openssl-cert2's old subject and date behaviour (ADR 0002).
+A refusal of the request itself (`SignerError`: wrong passphrase or PIN, a token or KMS key that isn't the CA's, a CSR whose signature doesn't verify, a subject OpenSSL would refuse) doesn't fall back, because OpenSSL refuses it too. Fallback reasons never contain keys, passphrases, PINs or CSRs. Requests that fall back get node-openssl-cert2's old subject and date behaviour (ADR 0002).

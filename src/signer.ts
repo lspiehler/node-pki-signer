@@ -3,7 +3,9 @@
 import NodeOpenSSL from 'node-openssl-cert2';
 import { caSignCSR } from './ca-sign-csr.ts';
 import { SignerError, UnsupportedError } from './errors.ts';
+import { createKmsClient, type KmsClient } from './kms-key.ts';
 import type { SignParams, SignResult } from './options.ts';
+import { Pkcs11Sessions } from './pkcs11-key.ts';
 
 /** Why an operation went to OpenSSL. Never contains keys, passphrases or CSRs. */
 export interface Fallback {
@@ -22,6 +24,10 @@ export interface SignerSettings {
   forceOpenSSL?: boolean | readonly string[];
   /** called for every fallback, e.g. to write it to the CA's log; a console.warn by default */
   onFallback?: (fallback: Fallback) => void;
+  /** the backends that may sign natively, e.g. ['software', 'kms', 'openssl-pkcs11']; all by default */
+  backends?: readonly string[];
+  /** the KMS client for `params.kms` keys; one with Application Default Credentials by default */
+  kms?: KmsClient;
 }
 
 /** Which path signed: the library itself or node-openssl-cert2. */
@@ -46,6 +52,8 @@ export interface Signer {
       callback: (err: false | string | Error, result: CASignCSRResult | false) => void,
     ): void;
   };
+  /** Logs out of PKCS#11 tokens and unloads their modules; the next signature opens them again. */
+  close(): void;
 }
 
 const message = (err: unknown) => (err instanceof Error ? err.message : String(err).trim());
@@ -54,6 +62,20 @@ const message = (err: unknown) => (err instanceof Error ? err.message : String(e
 export function createSigner(settings: SignerSettings = {}): Signer {
   const openssl = new NodeOpenSSL(settings.binpath ? { binpath: settings.binpath } : undefined);
   const force = settings.forceOpenSSL ?? false;
+  const pkcs11 = new Pkcs11Sessions();
+  let kms: Promise<KmsClient> | undefined = settings.kms && Promise.resolve(settings.kms);
+  const keySettings = {
+    pkcs11,
+    kms: () => {
+      kms ??= createKmsClient().catch((err: unknown) => {
+        kms = undefined;
+        throw err;
+      });
+      return kms;
+    },
+    ...(settings.binpath ? { binpath: settings.binpath } : {}),
+    ...(settings.backends ? { backends: settings.backends } : {}),
+  };
   const onFallback =
     settings.onFallback ??
     ((fallback: Fallback) => {
@@ -73,7 +95,7 @@ export function createSigner(settings: SignerSettings = {}): Signer {
       };
     }
     try {
-      return { result: await caSignCSR(params, { forceOpenSSL: force === false ? [] : force }) };
+      return { result: await caSignCSR(params, { ...keySettings, forceOpenSSL: force === false ? [] : force }) };
     } catch (err) {
       if (err instanceof UnsupportedError) return { fallback: { operation, step: err.step, reason: err.message } };
       // a refusal of the request itself, which OpenSSL would refuse too (the differential harness checks)
@@ -118,6 +140,9 @@ export function createSigner(settings: SignerSettings = {}): Signer {
           },
         );
       },
+    },
+    close() {
+      pkcs11.close();
     },
   };
 }

@@ -15,6 +15,12 @@ For each case, with the validity dates fixed by the options:
 
 In phase 0 the candidate was the reference itself, which showed that the corpus and the comparison are deterministic. The harness's own tests check that it reports a missing extension, a changed validity and a refusal.
 
+## Key backends (`test/differential/backends.test.ts`, ADR 0003)
+Every CA key type and hash a backend supports (`backends.ts`, which the allowlist must match) is signed with that backend alone and compared the same way:
+- **`openssl`:** the PEM key through `openssl dgst`, against the usual reference.
+- **`pkcs11` and `openssl-pkcs11`:** the CA key is imported into a SoftHSM token (`softhsm.ts`). The reference gets the agent's parameters (`pkcs11` and `options.module`) and runs `openssl ca` through pkcs11-provider. That crashes unloading SoftHSM after writing the certificate, so the reference accepts a certificate written before a SIGSEGV. Also checked: a wrong PIN is refused without the PIN in the message, the right PIN logs in again, and a token key that isn't the CA's fails verification. Needs `softhsm2` and `pkcs11-provider`; skipped without them unless `CI` is set.
+- **`kms`:** a stand-in for `asymmetricSign` (`fake-kms.ts`) that holds the CA key and refuses what KMS refuses. It covers the key types and digests KMS offers (RSA with SHA-256/512, P-256 with SHA-256, P-384 with SHA-384, ML-DSA, SLH-DSA-SHA2-128s), bypassing the allowlist, which has no KMS entries until a test against the real service.
+
 The native signer's own tests (`src/ca-sign-csr.test.ts`) cover what the harness can't: dates in a time zone that isn't UTC, `days` without a `startdate`, and each refusal naming its step.
 
 ## Corpus (`test/differential/corpus.ts`)

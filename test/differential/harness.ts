@@ -24,8 +24,11 @@ async function attempt(signer: Signer, params: SignParams): Promise<{ pem: strin
   }
 }
 
-export async function differential(params: SignParams, candidate: Signer): Promise<Outcome> {
-  const [ref, cand] = await Promise.all([attempt(referenceSigner, params), attempt(candidate, params)]);
+/** `sequential` signs with the reference first, for keys several processes can't use at once. */
+export async function differential(params: SignParams, candidate: Signer, sequential = false): Promise<Outcome> {
+  const [ref, cand] = sequential
+    ? [await attempt(referenceSigner, params), await attempt(candidate, params)]
+    : await Promise.all([attempt(referenceSigner, params), attempt(candidate, params)]);
   if ('error' in ref || 'error' in cand) {
     const describe = (r: typeof ref) => ('error' in r ? r.error : 'signed');
     return {

@@ -46,5 +46,9 @@
     "@peculiar/asn1-x509": "2.10.0",
     "asn1js": "3.0.10",
     "node-openssl-cert2": "0.7.34"
+  },
+  "optionalDependencies": {
+    "@google-cloud/kms": "6.2.1",
+    "pkcs11js": "2.1.7"
   }
 }

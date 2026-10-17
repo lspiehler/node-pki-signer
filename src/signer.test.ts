@@ -80,18 +80,23 @@ describe('createSigner', () => {
     );
   });
 
-  test('falls back for PKCS#11 keys and reports OpenSSL failures without the PIN', async () => {
-    const s = signer();
+  test('reports PKCS#11 failures without the PIN', async () => {
     const pkcs11 = { uri: 'pkcs11:object=missing;type=private', modulePath: '/nonexistent.so', pin: 'secret-pin-1234' };
+    // pkcs11js can't load the module, then openssl can't either
+    const s = signer();
     await assert.rejects(s.caSignCSR({ ...params(rsaCA), pkcs11 }), (err: unknown) => {
+      assert.ok(err instanceof SignerError && err.step === 'openssl dgst', String(err));
+      assert.ok(!err.message.includes(pkcs11.pin));
+      return true;
+    });
+    assert.deepEqual(s.fallbacks, []);
+    // node-openssl-cert2 when forced
+    const forced = signer({ forceOpenSSL: true });
+    await assert.rejects(forced.caSignCSR({ ...params(rsaCA), pkcs11 }), (err: unknown) => {
       assert.ok(err instanceof SignerError && err.step === 'sign with OpenSSL', String(err));
       assert.ok(!err.message.includes(pkcs11.pin));
       return true;
     });
-    assert.deepEqual(
-      s.fallbacks.map((f) => f.reason),
-      ['load CA key: PKCS#11 keys'],
-    );
   });
 
   test('does not fall back when the request itself is refused', async () => {
