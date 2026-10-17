@@ -12,20 +12,26 @@ concurrency:
 
 jobs:
   test:
-    # the user's self-hosted pool: fresh ubuntu:26.04 container per job, Node 24 and OpenSSL 3.5
-    runs-on: [self-hosted, linux, x64, pkiaas]
+    # GitHub-hosted: once the repo is public, pull requests from forks must not reach the self-hosted
+    # pool. Ubuntu 26.04 has OpenSSL 3.5, SoftHSM 2.6 and pkcs11-provider 1.2.
+    runs-on: ubuntu-latest
+    container: ubuntu:26.04
     steps:
+      # SoftHSM and pkcs11-provider for the PKCS#11 backends' tests; python3, make and g++ for building
+      # pkcs11js; git and xz for checkout and setup-node
+      - name: Test tools
+        run: |
+          apt-get update -q
+          apt-get install -y -q --no-install-recommends ca-certificates git xz-utils openssl python3 make g++ softhsm2 pkcs11-provider
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+        with:
+          node-version: 24
       - name: Versions
         run: |
           node --version
           node -p "'bundled OpenSSL ' + process.versions.openssl"
           openssl version
-      # SoftHSM and pkcs11-provider for the PKCS#11 backends' tests; python3 for building pkcs11js
-      - name: PKCS#11 test tools
-        run: |
-          sudo apt-get update -q
-          sudo apt-get install -y -q --no-install-recommends python3 softhsm2 pkcs11-provider
       - run: npm ci
       - run: npm run typecheck
       - run: npm run lint

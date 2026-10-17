@@ -26,7 +26,7 @@ A library that signs X.509 certificates (and later CRLs, CSRs, OCSP and CMS) in-
 ## Tests
 - `node:test`. Check every signing path against OpenSSL 3.5 (`openssl verify`, `openssl x509 -text`) and, for migrated functions, byte-for-byte against node-openssl-cert2's output with the serial and dates fixed (the differential harness in `test/differential/`, see `docs/differential-harness.md`). Add a corpus case for every input shape a caller can send.
 - Before committing, run `npm run typecheck`, `npm run lint`, `npm run format:check` and `npm test`.
-- CI runs on the user's self-hosted runners.
+- CI runs on GitHub-hosted runners in an Ubuntu 26.04 container. Never move it to the user's self-hosted runners: once the repo is public, pull requests from forks would run on them.
 
 ## Dependencies
-- Exact versions published at least 14 days earlier (`npm install --before=<date>`). TypeScript stays on 5.9.x, matching pkiaas.
+- Exact versions published at least 14 days earlier (`npm install --before=<date>`). The user's own packages (published from lspiehler repos, e.g. node-openssl-cert2) are exempt. TypeScript stays on 5.9.x, matching pkiaas.
