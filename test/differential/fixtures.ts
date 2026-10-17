@@ -46,7 +46,7 @@ export async function generateKey(spec: KeySpec, passphrase?: string) {
 }
 
 /** Writes PEM files into a temporary directory for the duration of `run`. */
-async function withFiles<T>(files: Record<string, string>, run: (dir: string) => Promise<T>): Promise<T> {
+export async function withFiles<T>(files: Record<string, string>, run: (dir: string) => Promise<T>): Promise<T> {
   const dir = await mkdtemp(join(tmpdir(), 'pki-signer-fixture-'));
   try {
     await Promise.all(Object.entries(files).map(([name, data]) => writeFile(join(dir, name), data, { mode: 0o600 })));
