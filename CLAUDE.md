@@ -6,7 +6,7 @@ A library that signs X.509 certificates (and later CRLs, CSRs, OCSP and CMS) in-
 - Modify as little code as possible. Follow the existing patterns and coding style.
 - Make every change on a branch and open a pull request against `master`. Don't push to `master`; the user merges.
 - If you notice anything urgent while working (security, crashes, data loss), report it, even if it's outside the task.
-- The repo is private and `package.json` has `"private": true`. Don't publish it or make the repo public; how it is distributed is still to be decided.
+- The repo is public and the package is published to npm (decided 2026-10-17). Prepare version bumps and check the tarball (`npm pack --dry-run`); the user runs `npm publish`.
 
 ## Code
 - TypeScript, erasable syntax only (tests run with Node's type stripping); `async`/`await`. The package is published as compiled ES modules plus types (`npm run build` → `dist/`), because Node won't strip types inside `node_modules`. CommonJS callers load it with `require()`.
