@@ -16,3 +16,7 @@ ADR 0001 says the native signer runs in production in shadow mode before it repl
 - The differential harness also runs shadow mode against every reference certificate. All of them match, except the intended subject differences of ADR 0002, which show up as `subject`.
 - Intended differences (ADR 0002) show up as `differ` in production too, so callers should expect `subject` differences where the reference cuts the subject short.
 - `buildTBS`, `validity` and `parseRequest` are split out of `caSignCSR` so that both paths build the TBS with the same code. `test/differential/compare.ts` uses the library's TBS field splitter (`src/tbs-fields.ts`).
+
+## Update 2026-10-17: the native TBS and the issued signature (0.2.0)
+- **`tbs`:** `match` and `differ` results include the TBS the native signer built (DER). Callers keep it for a difference, so the bytes can be compared and the case reproduced without running anything again.
+- **`signature`:** every result says whether the issued certificate's signature verifies with the CA certificate's public key: `valid`, `invalid`, or `unchecked` when either certificate doesn't parse. It's checked whatever the outcome, with `X509Certificate.verify` (OpenSSL), so every key type OpenSSL knows is covered. It catches what content comparison can't: an IoT HSM agent signing with the wrong key, or a certificate damaged on the way back. The differential harness checks that every reference certificate verifies.
