@@ -73,6 +73,8 @@ interface CaseSpec {
   process?: Partial<Omit<ProcessParams, 'ca' | 'csroptions' | 'templateoptions' | 'now'>>;
   /** builds the options from the parsed CSR instead of processOptions, for paths that skip templates */
   options?: (csroptions: SignOptions, ca: IssuingCA['ca']) => SignOptions;
+  /** changes the built options, for shapes processOptions never makes */
+  adjust?: (options: SignOptions) => void;
 }
 
 function corpusCase(spec: CaseSpec): CorpusCase {
@@ -96,6 +98,7 @@ function corpusCase(spec: CaseSpec): CorpusCase {
             now,
             ...spec.process,
           });
+      spec.adjust?.(options);
       return { csr, options, ca: ca.cert, key: ca.key, password: ca.password };
     },
   };
@@ -226,6 +229,11 @@ export const corpus: CorpusCase[] = [
       ],
     },
   }),
+  // must-staple: csr.parse passes the CSR's TLS feature extension through as `tlsfeature`
+  corpusCase({
+    name: 'CSR must-staple (TLS feature)',
+    csr: { ...standardCSR, config: [...(standardCSR.config ?? []), 'tlsfeature = status_request'] },
+  }),
   ...['RSA-4096', 'EC-P256', 'EC-P384', 'EC-P521', 'ED25519', 'ML-DSA-65', 'SLH-DSA-SHA2-128F'].map((key) =>
     corpusCase({ name: `CSR key ${key}`, csr: { ...standardCSR, key } }),
   ),
@@ -259,6 +267,47 @@ export const corpus: CorpusCase[] = [
       },
     }),
   ),
+  // every attribute node-openssl-cert2 accepts, out of order: string types, limits and policy order
+  corpusCase({
+    name: 'admin override subject with every attribute',
+    process: {
+      requestoptions: {
+        subject: {
+          pseudonym: 'Pseudo',
+          dnQualifier: 'qualifier-1',
+          generationQualifier: 'Jr.',
+          initials: 'AL',
+          UID: 'ada',
+          givenName: 'Ada',
+          title: 'Engineer',
+          surname: 'Lovelace',
+          domainComponent: ['example', 'com'],
+          serialNumber: 'A1234',
+          businessCategory: 'Private Organization',
+          jurisdictionLocalityName: 'New Orleans',
+          jurisdictionStateOrProvinceName: 'Louisiana',
+          jurisdictionCountryName: 'US',
+          emailAddress: 'ada@example.com',
+          commonName: 'every.example.com',
+          organizationalUnitName: ['One', 'Two'],
+          organizationName: 'Example Org',
+          streetAddress: '1 Main St',
+          postalCode: '70112',
+          localityName: 'New Orleans',
+          stateOrProvinceName: 'Louisiana',
+          countryName: 'US',
+        },
+      },
+    },
+  }),
+  // without a subject the CSR's own subject is kept (pkiaas always sends one)
+  corpusCase({
+    name: 'no subject in options',
+    csr: { subject: '/C=US/O=Example Org/OU=Ops/CN=keep.example.com', config: [] },
+    adjust: (options) => {
+      delete options.subject;
+    },
+  }),
   corpusCase({
     name: 'admin override (template subject merged)',
     template: template('dev template 1').options,
