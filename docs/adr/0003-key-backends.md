@@ -29,6 +29,7 @@ When no backend is allowlisted, or none can load (e.g. pkcs11js isn't installed)
 - `openssl`: every CA key type and hash, like `software`.
 - `pkcs11` and `openssl-pkcs11`: RSA and ECDSA with SHA-1/256/384/512, tested on SoftHSM.
 - `kms`: nothing yet. The harness checks the requests and signatures against a stand-in client, not Google's service; KMS is allowlisted after a test against a real key.
+- **Update 2026-10-17:** `kms` allowlists `sha256WithRSAEncryption`, the only algorithm tested against Google's service so far (`test/live/kms.test.ts` with an HSM `RSA_SIGN_PKCS1_2048_SHA256` key: same TBS and text as libkmsp11, KMS refusals passed on, a wrong CA key caught, about 110 ms per certificate against about 1.8 s). Other KMS algorithms stay off the allowlist until the live test passes with a key of that kind.
 
 **Dependencies:** pkcs11js 2.1.7 and @google-cloud/kms 6.2.1 are optional dependencies, loaded only when a key needs them. pkcs11js compiles at install (node-gyp: python3, make, a C++ compiler); if it can't, PKCS#11 keys go to OpenSSL.
 

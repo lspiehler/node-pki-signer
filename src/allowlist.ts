@@ -38,8 +38,8 @@ const allowlist: Record<string, ReadonlySet<string>> = {
   // keys on a token, through pkcs11js and through openssl with pkcs11-provider
   pkcs11: classical,
   'openssl-pkcs11': classical,
-  // Google Cloud KMS: nothing until a test against the real service passes (ADR 0003)
-  kms: new Set(),
+  // Google Cloud KMS: what a test against the real service passed (test/live/kms.test.ts, ADR 0003)
+  kms: new Set(['sha256WithRSAEncryption']),
 };
 
 /** The signature algorithms allowlisted for a backend. */
