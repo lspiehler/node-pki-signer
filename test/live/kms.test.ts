@@ -13,10 +13,9 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, before, describe, test } from 'node:test';
 import { allowlisted, caSignCSR, type KmsClient, type NativeSettings, type SignParams } from '../../src/index.ts';
-import { caKeyCases } from '../differential/corpus.ts';
-import { caKeySpecs, generateKey, withFiles } from '../differential/fixtures.ts';
+import { caKeySpecs, generateKey } from '../differential/fixtures.ts';
 import { differential } from '../differential/harness.ts';
-import { openssl } from '../differential/openssl.ts';
+import { testIssuer, testRequest, verifyPartialChain } from './issuer.ts';
 
 process.env.TZ = 'UTC';
 
@@ -36,36 +35,6 @@ class CappedKms implements KmsClient {
     if (++this.signs > maxSigns) throw new Error(`more than ${maxSigns} KMS signatures`);
     return this.client.asymmetricSign(request);
   }
-}
-
-/** An issuer certificate for `publicKey` under a test name, signed by a throwaway key. */
-async function testIssuer(publicKey: string, name: string): Promise<string> {
-  const rsa = caKeySpecs.find((s) => s.name === 'RSA-2048')!;
-  const { privateKey } = await generateKey(rsa);
-  const ext = [
-    '[ ca ]',
-    'basicConstraints = critical, CA:true',
-    'keyUsage = critical, digitalSignature, keyCertSign, cRLSign',
-    'subjectKeyIdentifier = hash',
-  ].join('\n');
-  return withFiles({ 'throwaway.key': privateKey, 'kms.pub': publicKey, 'ext.cnf': ext }, (dir) =>
-    openssl([
-      'x509',
-      '-new',
-      '-key',
-      join(dir, 'throwaway.key'),
-      '-force_pubkey',
-      join(dir, 'kms.pub'),
-      '-subj',
-      `/C=US/O=PKIaaS Test/CN=${name}`,
-      '-days',
-      '1',
-      '-extfile',
-      join(dir, 'ext.cnf'),
-      '-extensions',
-      'ca',
-    ]),
-  );
 }
 
 describe('live: kms backend against Google Cloud KMS', { skip: !keyVersion && 'needs LIVE_KMS_KEY_VERSION' }, () => {
@@ -90,23 +59,12 @@ describe('live: kms backend against Google Cloud KMS', { skip: !keyVersion && 'n
     if (configDir) await rm(configDir, { recursive: true, force: true });
   });
 
-  // the agent's parameters for a KMS key, plus kms.keyVersion; an hour's validity
+  // the agent's parameters for a KMS key, plus kms.keyVersion
   async function params(hash: string, ca = issuer): Promise<SignParams> {
-    const c = caKeyCases.find((c) => c.spec.name === 'RSA-2048' && c.hash === 'sha256')!;
-    const built = await c.build();
-    const now = Date.now();
+    const request = await testRequest(ca, hash);
     return {
-      ...built,
-      ca,
-      key: '',
-      password: '',
-      options: {
-        ...built.options,
-        hash,
-        startdate: new Date(now - 5 * 60 * 1000),
-        enddate: new Date(now + 60 * 60 * 1000),
-        module: modulePath,
-      },
+      ...request,
+      options: { ...request.options, module: modulePath },
       pkcs11: { uri: `pkcs11:object=${cryptoKey};type=private`, pin: '', modulePath },
       kms: { keyVersion },
     };
@@ -124,11 +82,7 @@ describe('live: kms backend against Google Cloud KMS', { skip: !keyVersion && 'n
     assert.equal(outcome.kind, 'both signed', JSON.stringify(outcome));
     assert.deepEqual(outcome.differences, [], 'TBS fields differ');
     assert.deepEqual(outcome.text, [], 'openssl x509 -text differs');
-    // the throwaway issuer isn't self-signed, so openssl only accepts it as a partial chain
-    const verified = await withFiles({ 'ca.pem': issuer, 'cert.pem': outcome.candidatePEM }, (dir) =>
-      openssl(['verify', '-partial_chain', '-CAfile', join(dir, 'ca.pem'), join(dir, 'cert.pem')]),
-    );
-    assert.match(verified, /: OK\n$/);
+    assert.match(await verifyPartialChain(outcome.candidatePEM, issuer), /: OK\n$/);
     assert.ok(allowlisted('kms').has('sha256WithRSAEncryption'));
   });
 
