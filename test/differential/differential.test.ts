@@ -72,10 +72,18 @@ describe('differential: reference against candidate', { concurrency: availablePa
       assert.deepEqual(outcome.verify, { reference: undefined, candidate: undefined }, 'openssl verify');
       // shadow mode rebuilds the reference's TBS exactly, apart from the same intended differences
       const shadow = await shadowCASignCSR(params, outcome.referencePEM);
+      // and every reference certificate's signature verifies with its CA, every key type included
+      assert.equal(shadow.signature, 'valid', 'shadow signature');
       if (fullSubject !== undefined) {
-        assert.deepEqual(shadow, { outcome: 'differ', algorithm: shadow.algorithm, fields: ['subject'] }, 'shadow');
+        assert.ok(shadow.outcome === 'differ', JSON.stringify(shadow));
+        assert.deepEqual(shadow.fields, ['subject'], 'shadow');
       } else {
         assert.equal(shadow.outcome, 'match', JSON.stringify(shadow));
+        // the native TBS is the reference certificate's TBS, byte for byte
+        assert.ok(
+          Buffer.from(new X509Certificate(outcome.referencePEM).raw).includes(Buffer.from(shadow.tbs)),
+          'TBS bytes',
+        );
       }
     });
   }
