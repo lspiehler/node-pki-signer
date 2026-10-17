@@ -36,6 +36,7 @@ export function softwareKey(pem: string, passphrase: string | undefined, hash = 
   const { name, digest } = signatureAlgorithm(key, hash);
   const spki = createPublicKey(key).export({ type: 'spki', format: 'der' });
   return {
+    backend: 'software',
     algorithm: name,
     publicKey: () => Promise.resolve(new Uint8Array(spki)),
     async sign(tbs) {

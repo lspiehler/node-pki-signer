@@ -19,6 +19,7 @@ import * as asn1js from 'asn1js';
 import { X509Certificate, createHash, createPublicKey, randomBytes, verify } from 'node:crypto';
 import { promisify } from 'node:util';
 import { algorithmIdentifier, verifyHash } from './algorithms.ts';
+import { checkAllowlist } from './allowlist.ts';
 import { SignerError, UnsupportedError } from './errors.ts';
 import { buildExtensions } from './extensions.ts';
 import type { SignParams, SignResult } from './options.ts';
@@ -133,16 +134,22 @@ async function signTBS(tbs: TBSCertificate, key: SigningKey): Promise<ArrayBuffe
   );
 }
 
+export interface NativeSettings {
+  /** signature algorithms to leave to OpenSSL even though they're allowlisted, e.g. 'ML-DSA-65' */
+  forceOpenSSL?: readonly string[];
+}
+
 /**
  * Signs a CSR with a CA, taking the same parameters as node-openssl-cert2's x509.CASignCSR and
  * returning its `data` and `serial`. Throws UnsupportedError for what must go to OpenSSL instead.
  */
-export async function caSignCSR(params: SignParams): Promise<SignResult> {
+export async function caSignCSR(params: SignParams, settings: NativeSettings = {}): Promise<SignResult> {
   if (params.pkcs11) throw new UnsupportedError('load CA key', 'PKCS#11 keys');
   const options = params.options;
   const info = await parseCSR(params.csr);
   const issuer = parseIssuer(params.ca);
   const key = softwareKey(params.key, params.password, options.hash ?? 'sha256');
+  checkAllowlist(key, settings.forceOpenSSL);
   const caPublicKey = issuer.publicKey.export({ type: 'spki', format: 'der' });
   if (!equal(await key.publicKey(), caPublicKey)) {
     throw new SignerError('load CA key', "the CA certificate and private key don't match");
