@@ -171,12 +171,59 @@ export class Pkcs11Sessions {
     };
     const { pkcs11 } = module;
     const slot = this.#slot(pkcs11, uri);
-    this.#login(lib, module, slot, ref.pin);
+    const login = () => {
+      this.#login(lib, module, slot, ref.pin);
+    };
+    login();
     const template: Pkcs11js.Template = [{ type: lib.CKA_CLASS, value: lib.CKO_PRIVATE_KEY }];
     const label = uri.get('object');
     const id = uri.get('id');
     if (label) template.push({ type: lib.CKA_LABEL, value: label.toString('utf8') });
     if (id) template.push({ type: lib.CKA_ID, value: id });
+
+    const signOnce = async (input: Buffer): Promise<Uint8Array> => {
+      let session: Buffer;
+      try {
+        session = pkcs11.C_OpenSession(slot, lib.CKF_SERIAL_SESSION);
+      } catch (err) {
+        reset();
+        throw new SignerError('open PKCS#11 session', ckr(err));
+      }
+      try {
+        pkcs11.C_FindObjectsInit(session, template);
+        const keys = pkcs11.C_FindObjects(session, 2);
+        pkcs11.C_FindObjectsFinal(session);
+        if (keys.length !== 1) {
+          throw new SignerError(
+            'find PKCS#11 key',
+            keys.length ? 'more than one private key matches' : 'no private key matches',
+          );
+        }
+        try {
+          pkcs11.C_SignInit(session, { mechanism: rsa ? lib.CKM_RSA_PKCS : lib.CKM_ECDSA }, keys[0] as Buffer);
+        } catch (err) {
+          // the token can't sign this way, so OpenSSL may
+          throw new UnsupportedError('PKCS#11 sign', ckr(err));
+        }
+        const signature = await new Promise<Buffer>((resolve, reject) => {
+          pkcs11.C_Sign(session, input, Buffer.alloc(2048), (err: Error | null, data: Buffer) => {
+            if (err) reject(new SignerError('PKCS#11 sign', ckr(err)));
+            else resolve(data);
+          });
+        });
+        return rsa ? new Uint8Array(signature) : ecdsaDER(signature);
+      } catch (err) {
+        reset();
+        if (err instanceof SignerError) throw err;
+        throw new SignerError('find PKCS#11 key', ckr(err));
+      } finally {
+        try {
+          pkcs11.C_CloseSession(session);
+        } catch {
+          // the token is gone
+        }
+      }
+    };
 
     return {
       backend: 'pkcs11',
@@ -184,47 +231,16 @@ export class Pkcs11Sessions {
       publicKey: () => Promise.resolve(publicKey),
       async sign(tbs) {
         const digest = createHash(hash).update(tbs).digest();
-        let session: Buffer;
+        const input = rsa ? Buffer.concat([Buffer.from(prefix, 'hex'), digest]) : digest;
         try {
-          session = pkcs11.C_OpenSession(slot, lib.CKF_SERIAL_SESSION);
+          return await signOnce(input);
         } catch (err) {
-          reset();
-          throw new SignerError('open PKCS#11 session', ckr(err));
-        }
-        try {
-          pkcs11.C_FindObjectsInit(session, template);
-          const keys = pkcs11.C_FindObjects(session, 2);
-          pkcs11.C_FindObjectsFinal(session);
-          if (keys.length !== 1) {
-            throw new SignerError(
-              'find PKCS#11 key',
-              keys.length ? 'more than one private key matches' : 'no private key matches',
-            );
-          }
-          try {
-            pkcs11.C_SignInit(session, { mechanism: rsa ? lib.CKM_RSA_PKCS : lib.CKM_ECDSA }, keys[0] as Buffer);
-          } catch (err) {
-            // the token can't sign this way, so OpenSSL may
-            throw new UnsupportedError('PKCS#11 sign', ckr(err));
-          }
-          const input = rsa ? Buffer.concat([Buffer.from(prefix, 'hex'), digest]) : digest;
-          const signature = await new Promise<Buffer>((resolve, reject) => {
-            pkcs11.C_Sign(session, input, Buffer.alloc(2048), (err: Error | null, data: Buffer) => {
-              if (err) reject(new SignerError('PKCS#11 sign', ckr(err)));
-              else resolve(data);
-            });
-          });
-          return rsa ? new Uint8Array(signature) : ecdsaDER(signature);
-        } catch (err) {
-          reset();
-          if (err instanceof SignerError) throw err;
-          throw new SignerError('find PKCS#11 key', ckr(err));
-        } finally {
-          try {
-            pkcs11.C_CloseSession(session);
-          } catch {
-            // the token is gone
-          }
+          // another process using a YubiKey resets its login, which hides the private keys from this
+          // one until it logs in again (ADR 0003)
+          const loggedOut = ['find PKCS#11 key: no private key matches', 'PKCS#11 sign: CKR_USER_NOT_LOGGED_IN'];
+          if (!(err instanceof SignerError && loggedOut.includes(err.message))) throw err;
+          login();
+          return signOnce(input);
         }
       },
     };

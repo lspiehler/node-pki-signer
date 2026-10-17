@@ -23,6 +23,8 @@ Every CA key type and hash a backend supports (`backends.ts`, which the allowlis
 
 The native signer's own tests (`src/ca-sign-csr.test.ts`) cover what the harness can't: dates in a time zone that isn't UTC, `days` without a `startdate`, and each refusal naming its step.
 
+`test/live/pkcs11.test.ts` runs both PKCS#11 backends against a real token, e.g. a YubiKey, when `LIVE_PKCS11_URI` names a private key (with `LIVE_PKCS11_MODULE`, libykcs11 by default, and the user PIN in `LIVE_PKCS11_PIN`; never a wrong one, since a YubiKey blocks after three). It signs every hash against the same reference. The reference runs first in its own process, which also checks that pkcs11js logs in again after another process used the token. Certificates come from a throwaway issuer certificate under a test name (`test/live/issuer.ts`) and are valid for an hour, so even a production CA's key can be used.
+
 ## Corpus (`test/differential/corpus.ts`)
 Options are built the way pkiaas builds them: the CSR goes through node-openssl-cert2's `csr.parse`, then through a copy of pkiaas's `processOptions` (`pkiaas-options.ts`, from `lib/template/processTemplate.js`). Keys, CAs and CSRs are generated on each run.
 - **Templates:** every template shape (`test/corpus/templates.json`), on an RSA-2048 CA. That's the 4 presets plus the 83 other distinct `options` of the 626 templates on dev, with subject values and custom AIA URLs anonymized.
