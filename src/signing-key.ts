@@ -4,6 +4,9 @@
  * (software key, PKCS#11 token, Google Cloud KMS, OpenSSL fallback) is one implementation of this.
  */
 export interface SigningKey {
+  /** Where the key lives, e.g. 'software'; the allowlist is per backend. */
+  readonly backend: string;
+
   /** The signature algorithm this key produces, e.g. 'sha256WithRSAEncryption', 'ecdsa-with-SHA384', 'ML-DSA-65'. */
   readonly algorithm: string;
 

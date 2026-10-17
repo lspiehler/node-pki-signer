@@ -18,8 +18,8 @@ export const referenceSigner: Signer = (params) =>
     // CASignCSR fills in defaults on the options object, so give it a copy
     const options = structuredClone(params.options);
     openssl2.x509.CASignCSR({ ...params, options }, (err, result) => {
-      if (err) {
-        reject(new Error(`reference CASignCSR: ${message(err)}`));
+      if (err || !result || !result.data) {
+        reject(new Error(`reference CASignCSR: ${err ? message(err) : 'no certificate'}`));
       } else {
         resolve(result.data);
       }

@@ -157,12 +157,17 @@ const sctListDER =
 
 const hashes = ['sha1', 'sha256', 'sha384', 'sha512'];
 
+/**
+ * The hashes the corpus signs with for a CA key type. For PQC, 'default' is what pkiaas uses for
+ * service certificates, sha256 what the preset templates carry.
+ */
+export const caHashes = (spec: KeySpec) => (spec.pqc ? ['default', 'sha256'] : hashes);
+
 export const corpus: CorpusCase[] = [
   ...templates.map((t) => corpusCase({ name: `template ${t.name}`, template: t.options })),
 
   ...caKeySpecs.flatMap((spec) =>
-    // PQC: 'default' is what pkiaas uses for service certificates, sha256 what the preset templates carry
-    (spec.pqc ? ['default', 'sha256'] : hashes).map((hash) =>
+    caHashes(spec).map((hash) =>
       corpusCase({ name: `CA ${spec.name} ${hash}`, ca: spec.name, template: withHash(webServer.options, hash) }),
     ),
   ),
