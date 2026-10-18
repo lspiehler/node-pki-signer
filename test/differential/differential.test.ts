@@ -28,11 +28,7 @@ const referenceRejects = new Set<string>([
 
 // cases the native signer leaves to OpenSSL (UnsupportedError): createSigner falls back and issues the
 // reference's certificate, and shadow mode reports them as unsupported
-const fallsBack = new Set<string>([
-  'template with hash SHA256',
-  'template with hash with a trailing space',
-  'template with hash sha224',
-]);
+const fallsBack = new Set<string>(['template with hash SHA256', 'template with hash with a trailing space']);
 
 // ADR 0005: CSRs with a version other than v1, which the reference refuses and the candidate signs
 const csrVersions = new Set<string>(['CSR version 2 (Meraki MDM)', 'CSR version 2 (SCEP CA request)']);

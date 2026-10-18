@@ -71,12 +71,13 @@ describe('createSigner', () => {
 
   test('falls back for what the native signer does not support', async () => {
     const s = signer();
-    const result = await s.caSignCSR(params(rsaCA, { hash: 'sha224' }));
+    // OpenSSL reads digest names case-insensitively; production has templates with this spelling
+    const result = await s.caSignCSR(params(rsaCA, { hash: 'SHA256' }));
     assert.equal(result.signedBy, 'openssl');
-    assert.match(await openssl(['x509', '-noout', '-text'], result.data), /sha224WithRSAEncryption/);
+    assert.match(await openssl(['x509', '-noout', '-text'], result.data), /sha256WithRSAEncryption/);
     assert.deepEqual(
       s.fallbacks.map((f) => f.reason),
-      ['load CA key: hash sha224'],
+      ['load CA key: hash SHA256'],
     );
   });
 

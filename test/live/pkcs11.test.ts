@@ -57,7 +57,7 @@ describe('live: PKCS#11 backends against a token', { skip: !uri && 'needs LIVE_P
 
   // one at a time and the reference first, as on SoftHSM; pkcs11js stays logged in meanwhile
   for (const backend of ['pkcs11', 'openssl-pkcs11']) {
-    for (const hash of ['sha1', 'sha256', 'sha384', 'sha512']) {
+    for (const hash of ['sha1', 'sha224', 'sha256', 'sha384', 'sha512']) {
       test(`${backend} ${hash} signs like openssl ca`, async () => {
         const p = await params(hash);
         const outcome = await differential(p, async (p) => (await caSignCSR(p, settings(backend))).data, true);

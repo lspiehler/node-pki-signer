@@ -160,7 +160,7 @@ const sctListDER =
   Array.from({ length: 32 }, (_, i) => (i + 0x10).toString(16).toUpperCase().padStart(2, '0')).join(':') +
   ':00:00:01:92:00:00:00:00:00:00:04:03:00:08:30:06:02:01:01:02:01:01';
 
-const hashes = ['sha1', 'sha256', 'sha384', 'sha512'];
+const hashes = ['sha1', 'sha224', 'sha256', 'sha384', 'sha512'];
 
 /**
  * The hashes the corpus signs with for a CA key type. For PQC, 'default' is what pkiaas uses for
@@ -336,7 +336,6 @@ export const corpus: CorpusCase[] = [
     'days 999999999': (t) => (t.days = 999999999),
     'hash SHA256': (t) => (t.hash = 'SHA256'),
     'hash with a trailing space': (t) => (t.hash = 'sha256 '),
-    'hash sha224': (t) => (t.hash = 'sha224'),
     'no hash': (t) => delete t.hash,
     'IPsec and Microsoft EKU names': (t) =>
       (t.extensions.extendedKeyUsage = {
