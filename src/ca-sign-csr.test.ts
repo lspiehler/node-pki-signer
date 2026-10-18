@@ -92,6 +92,21 @@ describe('caSignCSR', () => {
     await assert.rejects(caSignCSR(params({ subject: { commonName: 'a'.repeat(65) } })), failsAt('build subject'));
   });
 
+  test('refuses control characters like node-openssl-cert2, without repeating the value', async () => {
+    for (const options of [
+      { subject: { commonName: 'a\nb' } },
+      { extensions: { SANs: { DNS: ['a.example.com\r'] } } },
+      { extensions: { authorityInfoAccess: { caIssuers: { customURL: '\thttp://aia.example.net/ca.crt' } } } },
+    ]) {
+      await assert.rejects(caSignCSR(params(options)), (err: unknown) => {
+        assert.ok(failsAt('build TBS')(err));
+        assert.match(String(err), /control character in options\.(subject|extensions)\./);
+        assert.doesNotMatch(String(err), /example/);
+        return true;
+      });
+    }
+  });
+
   test('leaves unknown extensions to OpenSSL', async () => {
     await assert.rejects(
       caSignCSR(params({ extensions: { nameConstraints: {} } })),

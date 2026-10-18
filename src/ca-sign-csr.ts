@@ -166,6 +166,20 @@ export function validity(options: SignParams['options']): Validity {
   return new Validity({ notBefore: startdate, notAfter: enddate });
 }
 
+// node-openssl-cert2 refuses a control character anywhere in the subject or extensions (a line break would
+// start a new openssl.cnf line); returns the path of the first string that has one, like its message
+function findControlCharacter(value: unknown, path: string): string | undefined {
+  // eslint-disable-next-line no-control-regex
+  if (typeof value === 'string') return /[\x00-\x1f\x7f]/.test(value) ? path : undefined;
+  if (value && typeof value === 'object' && !(value instanceof Date)) {
+    for (const [key, item] of Object.entries(value)) {
+      const found = findControlCharacter(key, path) ?? findControlCharacter(item, `${path}.${key}`);
+      if (found) return found;
+    }
+  }
+  return undefined;
+}
+
 /** The TBS certificate `openssl ca` would build for this request, with the given serial and validity. */
 export function buildTBS(
   params: SignParams,
@@ -175,6 +189,8 @@ export function buildTBS(
   dates: Validity,
 ): TBSCertificate {
   const options = params.options;
+  const invalid = findControlCharacter({ subject: options.subject, extensions: options.extensions }, 'options');
+  if (invalid) throw new SignerError('build TBS', `control character in ${invalid}`);
   const spki = info.subjectPKInfo;
   const subjectKeyIdentifier = createHash('sha1').update(new Uint8Array(spki.subjectPublicKey)).digest();
   const extensions = [
