@@ -102,7 +102,9 @@ function parseIssuer(pem: string) {
 
 function date(value: unknown, name: string): Date {
   const parsed = value === undefined ? new Date() : new Date(value as string);
-  if (Number.isNaN(parsed.getTime())) throw new SignerError('build TBS', `invalid ${name}`);
+  // GeneralizedTime has four-digit years, and `openssl ca` refuses dates it can't write
+  const year = parsed.getUTCFullYear();
+  if (Number.isNaN(year) || year < 0 || year > 9999) throw new SignerError('build TBS', `invalid ${name}`);
   // OpenSSL takes whole seconds, always as UTC (ADR 0002)
   return new Date(Math.floor(parsed.getTime() / 1000) * 1000);
 }
@@ -160,7 +162,7 @@ export function validity(options: SignParams['options']): Validity {
   const startdate = options.startdate ? date(options.startdate, 'startdate') : date(undefined, 'startdate');
   const enddate = options.startdate
     ? date(options.enddate, 'enddate')
-    : new Date(startdate.getTime() + (options.days ?? 365) * day);
+    : date(startdate.getTime() + (options.days ?? 365) * day, 'enddate');
   return new Validity({ notBefore: startdate, notAfter: enddate });
 }
 

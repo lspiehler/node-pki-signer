@@ -50,6 +50,13 @@ describe('caSignCSR', () => {
     assert.equal(cert.validToDate.getTime() - from, 30 * 24 * 60 * 60 * 1000);
   });
 
+  test('refuses dates after the year 9999', async () => {
+    const startdate = new Date(Date.UTC(2026, 0, 1));
+    const enddate = new Date(Date.UTC(10000, 0, 1));
+    await assert.rejects(caSignCSR(params({ startdate, enddate })), failsAt('build TBS'));
+    await assert.rejects(caSignCSR(params({ days: 9999999 })), failsAt('build TBS'));
+  });
+
   test('returns the serial number as upper-case hex', async () => {
     const result = await caSignCSR(params());
     assert.equal(result.serial, new X509Certificate(result.data).serialNumber);

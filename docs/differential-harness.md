@@ -11,6 +11,7 @@ For each case, with the validity dates fixed by the options:
 - **Signature value:** not compared, because ECDSA and ML-DSA signatures are randomized. Both certificates must pass `openssl verify` against the issuing CA instead. CT precertificates are verified with `-ignore_critical` because of the poison extension.
 - **`openssl x509 -text`:** the same, apart from the serial number and signature value.
 - **Refusals:** if the reference refuses a case, the candidate must refuse it too (`referenceRejects`).
+- **Fallbacks:** for the cases in `fallsBack`, the native signer throws `UnsupportedError`, so `createSigner` falls back to OpenSSL and issues the reference's certificate. Shadow mode must report them as `unsupported`.
 - **Intended differences (ADR 0002):** for the cases in `fullSubjects`, the reference truncates, empties or refuses the subject. The candidate must issue the full subject listed there, and nothing else may differ.
 - **CSR versions (ADR 0005):** for the cases in `csrVersions`, CSRs with version 2 instead of v1, the reference refuses and the candidate must sign: with the CSR's key, verified by `openssl verify`, and matched by shadow mode.
 
@@ -28,7 +29,7 @@ The native signer's own tests (`src/ca-sign-csr.test.ts`) cover what the harness
 
 ## Corpus (`test/differential/corpus.ts`)
 Options are built the way pkiaas builds them: the CSR goes through node-openssl-cert2's `csr.parse`, then through a copy of pkiaas's `processOptions` (`pkiaas-options.ts`, from `lib/template/processTemplate.js`). Keys, CAs and CSRs are generated on each run.
-- **Templates:** every template shape (`test/corpus/templates.json`), on an RSA-2048 CA. That's the 4 presets plus the 83 other distinct `options` of the 626 templates on dev, with subject values and custom AIA URLs anonymized.
+- **Templates:** every template shape (`test/corpus/templates.json`), on an RSA-2048 CA. That's the 4 presets plus the 83 other distinct `options` of the 626 templates on dev, with subject values and custom AIA URLs anonymized. A read-only scan of the 7532 production templates (2026-10-18, shapes only, no values) added the cases named `template with …` and `template policy OID …`: very long validities, unusual `hash` spellings, IPsec and Microsoft EKU names, an unknown EKU name, `encipherOnly`/`decipherOnly`, non-critical basic constraints, custom AIA URLs that are empty, not URLs, or padded with a tab and spaces, and a template `policy_oid` that is NULL (a fifth of them), empty or anyPolicy. Production has no nested subject arrays; its other subject shapes are covered by the admin override cases.
 - **CA key types:** all 20 that pkiaas offers. RSA and EC are each run with sha1/256/384/512; ML-DSA and SLH-DSA with `default` (what service certificates use) and `sha256` (what the preset templates carry).
 - **CSRs** shaped like those from:
   - ACME (empty subject)

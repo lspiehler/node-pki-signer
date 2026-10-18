@@ -327,6 +327,49 @@ export const corpus: CorpusCase[] = [
       delete options.subject;
     },
   }),
+  // template shapes from a scan of the production templates (2026-10-18) that dev doesn't have
+  ...Object.entries({
+    // 36500 and 72000 reach past 2049 (GeneralizedTime); the largest overflow the year 9999
+    'days 36500': (t) => (t.days = 36500),
+    'days 72000': (t) => (t.days = 72000),
+    'days 9999999': (t) => (t.days = 9999999),
+    'days 999999999': (t) => (t.days = 999999999),
+    'hash SHA256': (t) => (t.hash = 'SHA256'),
+    'hash with a trailing space': (t) => (t.hash = 'sha256 '),
+    'hash sha224': (t) => (t.hash = 'sha224'),
+    'no hash': (t) => delete t.hash,
+    'IPsec and Microsoft EKU names': (t) =>
+      (t.extensions.extendedKeyUsage = {
+        usages: ['ipsecIKE', 'ipsecEndSystem', 'ipsecTunnel', 'ipsecUser', 'msCTLSign', 'msEFS'],
+      }),
+    'unknown EKU name': (t) => (t.extensions.extendedKeyUsage = { usages: ['serverAuth', 'notAnEKUName'] }),
+    'encipherOnly and decipherOnly': (t) =>
+      (t.extensions.keyUsage = {
+        critical: true,
+        usages: ['digitalSignature', 'keyAgreement', 'encipherOnly', 'decipherOnly'],
+      }),
+    'non-critical basicConstraints': (t) => (t.extensions.basicConstraints = { critical: false, CA: false }),
+    'CA pathlen 10': (t) => (t.extensions.basicConstraints = { critical: true, CA: true, pathlen: 10 }),
+    'empty custom AIA URL': (t) => (t.extensions.authorityInfoAccess = { caIssuers: { customURL: '' }, OCSP: true }),
+    'custom AIA URL that is not a URL': (t) =>
+      (t.extensions.authorityInfoAccess = { caIssuers: { customURL: 'issuer.example.net' }, OCSP: true }),
+    'custom AIA URLs with a tab and spaces': (t) =>
+      (t.extensions.authorityInfoAccess = {
+        caIssuers: { customURL: '\thttp://aia1.example.net/issuer.crt, http://aia2.example.net/issuer.crt ' },
+        OCSP: true,
+      }),
+  } satisfies Record<string, (t: TemplateOptions) => unknown>).map(([what, change]) => {
+    const t = structuredClone(webServer.options);
+    change(t);
+    return corpusCase({ name: `template with ${what}`, template: t });
+  }),
+  // a template's policy_oid is NULL in a fifth of production's templates, and can be empty or anyPolicy
+  ...Object.entries({ NULL: null, empty: '', anyPolicy: '2.5.29.32.0' }).map(([what, policy_oid]) =>
+    corpusCase({
+      name: `template policy OID ${what}`,
+      process: { template: { policy_oid, ct_logs: null } },
+    }),
+  ),
   corpusCase({
     name: 'admin override (template subject merged)',
     template: template('dev template 1').options,

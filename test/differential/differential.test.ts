@@ -18,7 +18,21 @@ import { referenceSigner, type Signer } from './reference.ts';
 process.env.TZ = 'UTC';
 
 // cases where the reference path itself refuses to sign; a candidate must refuse them too
-const referenceRejects = new Set<string>(['CSR equals sign in subject']);
+const referenceRejects = new Set<string>([
+  'CSR equals sign in subject',
+  // past the year 9999, or past what a JavaScript date holds
+  'template with days 9999999',
+  'template with days 999999999',
+  'template with unknown EKU name',
+]);
+
+// cases the native signer leaves to OpenSSL (UnsupportedError): createSigner falls back and issues the
+// reference's certificate, and shadow mode reports them as unsupported
+const fallsBack = new Set<string>([
+  'template with hash SHA256',
+  'template with hash with a trailing space',
+  'template with hash sha224',
+]);
 
 // ADR 0005: CSRs with a version other than v1, which the reference refuses and the candidate signs
 const csrVersions = new Set<string>(['CSR version 2 (Meraki MDM)', 'CSR version 2 (SCEP CA request)']);
@@ -56,6 +70,14 @@ describe('differential: reference against candidate', { concurrency: availablePa
       const outcome = await differential(params, candidate);
       if (referenceRejects.has(c.name)) {
         assert.equal(outcome.kind, 'both rejected', JSON.stringify(outcome));
+        return;
+      }
+      if (fallsBack.has(c.name)) {
+        assert.ok(outcome.kind === 'one rejected' && outcome.reference === 'signed', JSON.stringify(outcome));
+        const referencePEM = await referenceSigner(params);
+        const shadow = await shadowCASignCSR(params, referencePEM);
+        assert.equal(shadow.outcome, 'unsupported', JSON.stringify(shadow));
+        assert.equal(shadow.signature, 'valid', 'shadow signature');
         return;
       }
       if (csrVersions.has(c.name)) {
