@@ -309,7 +309,8 @@ export function buildExtensions(extensions: Record<string, unknown> | null | und
       if (value) built.push(...list(value, 'customOIDs').map(customOID));
     } else {
       const build = Object.hasOwn(builders, key) ? builders[key] : undefined;
-      if (!build) throw new SignerError(step, `invalid extension ${key}`);
+      // node-openssl-cert2 refuses it today; a newer one may know it, so leave it to OpenSSL
+      if (!build) throw new UnsupportedError(step, `extension ${key}`);
       const ext = build(value);
       if (ext) built.push(ext);
     }
