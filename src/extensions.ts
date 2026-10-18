@@ -37,9 +37,11 @@ import { SignerError, UnsupportedError } from './errors.ts';
 const step = 'build extensions';
 
 const oidPattern = /^([0-2])((\.0)|(\.[1-9][0-9]*))*$/;
-// eslint-disable-next-line no-control-regex
-const ascii = /^[\x00-\x7f]*$/;
 const printable = /^[A-Za-z0-9 '()+,\-./:=?]*$/;
+
+// OpenSSL copies a config value's bytes into an IA5String as they are, so non-ASCII text comes out as
+// its UTF-8 bytes; asn1js writes one byte per character, so pass the bytes as a binary string
+const ia5 = (text: string): string => Buffer.from(text, 'utf8').toString('latin1');
 
 const keyUsages: Record<string, KeyUsageFlags> = {
   digitalSignature: KeyUsageFlags.digitalSignature,
@@ -142,9 +144,7 @@ function basicConstraints(value: unknown): Extension | undefined {
 // node-openssl-cert2 writes each value as a config line, and OpenSSL trims config values
 function uri(value: unknown, name: string): GeneralName {
   if (typeof value !== 'string') throw new SignerError(step, `${name} must be strings`);
-  const trimmed = value.trim();
-  if (!ascii.test(trimmed)) throw new UnsupportedError(step, `${name} with non-ASCII characters`);
-  return new GeneralName({ uniformResourceIdentifier: trimmed });
+  return new GeneralName({ uniformResourceIdentifier: ia5(value.trim()) });
 }
 
 const list = (value: unknown, name: string): unknown[] => {
@@ -245,8 +245,7 @@ function generalName(type: string, value: unknown): GeneralName {
   switch (type) {
     case 'DNS':
     case 'email':
-      if (!ascii.test(trimmed)) throw new UnsupportedError(step, `SANs ${type} with non-ASCII characters`);
-      return new GeneralName(type === 'DNS' ? { dNSName: trimmed } : { rfc822Name: trimmed });
+      return new GeneralName(type === 'DNS' ? { dNSName: ia5(trimmed) } : { rfc822Name: ia5(trimmed) });
     case 'URI':
       return uri(trimmed, 'SANs URI');
     case 'IP':
@@ -266,10 +265,10 @@ function generalName(type: string, value: unknown): GeneralName {
           ? name
           : undefined;
       const text = match?.[3] ?? '';
-      // OpenSSL reads the text as Latin-1, so only ASCII comes out as written
-      if (!typeId || !ascii.test(text)) throw new UnsupportedError(step, 'this SANs otherName form');
+      if (!typeId) throw new UnsupportedError(step, 'this SANs otherName form');
+      // OpenSSL reads the text's UTF-8 bytes as Latin-1 and encodes those characters as UTF-8 again
       return new GeneralName({
-        otherName: new OtherName({ typeId, value: new asn1js.Utf8String({ value: text }).toBER() }),
+        otherName: new OtherName({ typeId, value: new asn1js.Utf8String({ value: ia5(text) }).toBER() }),
       });
     }
     case 'dirName':
