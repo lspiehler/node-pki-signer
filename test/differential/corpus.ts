@@ -276,6 +276,26 @@ export const corpus: CorpusCase[] = [
       },
     },
   }),
+  // non-ASCII SANs: OpenSSL writes the UTF-8 bytes into the IA5String as they are (4-byte emoji,
+  // 3-byte CJK, 2-byte Arabic), and requesters use them to test unusual characters
+  corpusCase({
+    name: 'admin override SANs with non-ASCII characters',
+    process: {
+      requestoptions: {
+        extensions: {
+          SANs: {
+            DNS: ['😊.com', '中文.example', 'مثال.example'],
+            email: ['josé@例え.example', '😊@example.com'],
+            URI: ['https://例え.example/😊'],
+          },
+        },
+      },
+    },
+  }),
+  corpusCase({
+    name: 'admin override SANs with a non-ASCII UPN',
+    process: { requestoptions: { extensions: { SANs: { otherName: ['msUPN;UTF8:josé😊@例え.example'] } } } },
+  }),
   // subject values that reach -subj unescaped: admins and templates can set any value
   ...Object.entries({
     slash: 'Ops/Infra',
@@ -363,6 +383,9 @@ export const corpus: CorpusCase[] = [
     'empty custom AIA URL': (t) => (t.extensions.authorityInfoAccess = { caIssuers: { customURL: '' }, OCSP: true }),
     'custom AIA URL that is not a URL': (t) =>
       (t.extensions.authorityInfoAccess = { caIssuers: { customURL: 'issuer.example.net' }, OCSP: true }),
+    // UTF-8 bytes go into the IA5String as they are, as with SANs
+    'custom AIA URL with non-ASCII characters': (t) =>
+      (t.extensions.authorityInfoAccess = { caIssuers: { customURL: 'http://例え.example/😊/مثال.crt' }, OCSP: true }),
     'custom AIA URLs with a tab and spaces': (t) =>
       (t.extensions.authorityInfoAccess = {
         caIssuers: { customURL: '\thttp://aia1.example.net/issuer.crt, http://aia2.example.net/issuer.crt ' },
