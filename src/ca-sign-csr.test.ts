@@ -85,8 +85,11 @@ describe('caSignCSR', () => {
     await assert.rejects(caSignCSR(params({ subject: { commonName: 'a'.repeat(65) } })), failsAt('build subject'));
   });
 
-  test('refuses unknown extensions', async () => {
-    await assert.rejects(caSignCSR(params({ extensions: { nameConstraints: {} } })), failsAt('build extensions'));
+  test('leaves unknown extensions to OpenSSL', async () => {
+    await assert.rejects(
+      caSignCSR(params({ extensions: { nameConstraints: {} } })),
+      failsAt('build extensions', UnsupportedError),
+    );
   });
 
   test('leaves PKCS#11 keys to OpenSSL without PKCS#11 sessions', async () => {
