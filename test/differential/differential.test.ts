@@ -5,7 +5,10 @@ import assert from 'node:assert/strict';
 import { X509Certificate } from 'node:crypto';
 import { availableParallelism } from 'node:os';
 import { describe, test } from 'node:test';
+import { CertificationRequest } from '@peculiar/asn1-csr';
+import { AsnConvert } from '@peculiar/asn1-schema';
 import { shadowCASignCSR } from '../../src/index.ts';
+import { opensslVerify } from './compare.ts';
 import { corpus } from './corpus.ts';
 import { differential } from './harness.ts';
 import { nativeSigner } from './native.ts';
@@ -16,6 +19,9 @@ process.env.TZ = 'UTC';
 
 // cases where the reference path itself refuses to sign; a candidate must refuse them too
 const referenceRejects = new Set<string>(['CSR equals sign in subject']);
+
+// ADR 0005: CSRs with a version other than v1, which the reference refuses and the candidate signs
+const csrVersions = new Set<string>(['CSR version 2 (Meraki MDM)', 'CSR version 2 (SCEP CA request)']);
 
 // ADR 0002: where the reference truncates, empties or refuses the subject, the candidate issues the
 // full subject. Each case lists that subject as node:crypto prints it (RFC 2253 escapes).
@@ -50,6 +56,25 @@ describe('differential: reference against candidate', { concurrency: availablePa
       const outcome = await differential(params, candidate);
       if (referenceRejects.has(c.name)) {
         assert.equal(outcome.kind, 'both rejected', JSON.stringify(outcome));
+        return;
+      }
+      if (csrVersions.has(c.name)) {
+        // node-openssl-cert2 reports "Could not find certificate from <stdin>", not openssl's reason
+        assert.ok(outcome.kind === 'one rejected' && outcome.candidatePEM, JSON.stringify(outcome));
+        const cert = new X509Certificate(outcome.candidatePEM);
+        // the certificate carries the CSR's key, and OpenSSL verifies it
+        const csr = AsnConvert.parse(
+          Buffer.from(params.csr.replace(/-----[^-]+-----|\s/g, ''), 'base64'),
+          CertificationRequest,
+        );
+        assert.deepEqual(
+          cert.publicKey.export({ type: 'spki', format: 'der' }),
+          Buffer.from(AsnConvert.serialize(csr.certificationRequestInfo.subjectPKInfo)),
+        );
+        assert.equal(await opensslVerify(outcome.candidatePEM, params.ca), undefined, 'openssl verify');
+        const shadow = await shadowCASignCSR(params, outcome.candidatePEM);
+        assert.equal(shadow.outcome, 'match', JSON.stringify(shadow));
+        assert.equal(shadow.signature, 'valid', 'shadow signature');
         return;
       }
       const fullSubject = fullSubjects.get(c.name);

@@ -54,6 +54,8 @@ function issuingCA(name: string): Promise<IssuingCA> {
 }
 
 interface CSRSpec {
+  /** a CSR from test/corpus/, instead of a new one */
+  file?: string;
   key?: string;
   subject?: string;
   config?: string[];
@@ -84,9 +86,12 @@ function corpusCase(spec: CaseSpec): CorpusCase {
       const csrSpec = spec.csr ?? standardCSR;
       const [ca, csr] = await Promise.all([
         issuingCA(spec.ca ?? 'RSA-2048'),
-        createCSR(keySpec(csrSpec.key ?? 'RSA-2048'), csrSpec.subject ?? '/', csrSpec.config, csrSpec.attributes),
+        csrSpec.file
+          ? readFileSync(new URL(`../corpus/${csrSpec.file}`, import.meta.url), 'utf8')
+          : createCSR(keySpec(csrSpec.key ?? 'RSA-2048'), csrSpec.subject ?? '/', csrSpec.config, csrSpec.attributes),
       ]);
-      const csroptions = await parseCSR(csr);
+      // OpenSSL 3.5 doesn't verify CSRs with a version other than v1, so pkiaas refuses them (ADR 0005)
+      const csroptions = await parseCSR(csr, !csrSpec.file?.startsWith('csr-version-'));
       const templateoptions = spec.template ?? webServer.options;
       const options: SignOptions = spec.options
         ? spec.options(csroptions, ca.ca)
@@ -212,6 +217,10 @@ export const corpus: CorpusCase[] = [
   }),
   // csr.parse turns `a=b` into an attribute named "undefined", which the reference refuses
   corpusCase({ name: 'CSR equals sign in subject', csr: { subject: '/C=US/CN=a\\=b', config: [] } }),
+  // ADR 0005: CSRs with version 2 instead of v1 (0), from https://github.com/openssl/openssl/issues/28761;
+  // `openssl ca` 3.5 refuses them
+  corpusCase({ name: 'CSR version 2 (Meraki MDM)', csr: { file: 'csr-version-2-meraki.pem' } }),
+  corpusCase({ name: 'CSR version 2 (SCEP CA request)', csr: { file: 'csr-version-2-scep-ca.pem' } }),
   corpusCase({
     name: 'CSR slash and backslash in subject',
     csr: { subject: '/C=US/O=Ops\\/Infra/CN=back\\\\slash', config: [] },

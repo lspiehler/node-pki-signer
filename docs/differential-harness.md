@@ -12,6 +12,7 @@ For each case, with the validity dates fixed by the options:
 - **`openssl x509 -text`:** the same, apart from the serial number and signature value.
 - **Refusals:** if the reference refuses a case, the candidate must refuse it too (`referenceRejects`).
 - **Intended differences (ADR 0002):** for the cases in `fullSubjects`, the reference truncates, empties or refuses the subject. The candidate must issue the full subject listed there, and nothing else may differ.
+- **CSR versions (ADR 0005):** for the cases in `csrVersions`, CSRs with version 2 instead of v1, the reference refuses and the candidate must sign: with the CSR's key, verified by `openssl verify`, and matched by shadow mode.
 
 In phase 0 the candidate was the reference itself, which showed that the corpus and the comparison are deterministic. The harness's own tests check that it reports a missing extension, a changed validity and a refusal.
 

@@ -31,10 +31,13 @@ export const referenceSigner: Signer = (params) =>
     });
   });
 
-/** Parses a CSR into options the way pkiaas does (lib/csr/parseCSR.js). */
-export function parseCSR(csr: string): Promise<SignOptions> {
+/**
+ * Parses a CSR into options the way pkiaas does (lib/csr/parseCSR.js). processTemplate verifies the
+ * CSR's signature; `verify: false` skips that, for CSRs OpenSSL won't verify (ADR 0005).
+ */
+export function parseCSR(csr: string, verify = true): Promise<SignOptions> {
   return new Promise((resolve, reject) => {
-    openssl2.csr.parse({ csr, verify: true }, (err, result) => {
+    openssl2.csr.parse({ csr, verify }, (err, result) => {
       if (err) {
         reject(new Error(`parse CSR: ${message(err)}`));
       } else {
