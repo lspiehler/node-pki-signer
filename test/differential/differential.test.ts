@@ -24,11 +24,14 @@ const referenceRejects = new Set<string>([
   'template with days 9999999',
   'template with days 999999999',
   'template with unknown EKU name',
+  // node-openssl-cert2 0.7.37 refuses hashes with other characters and control characters anywhere
+  'template with hash with a trailing space',
+  'template with custom AIA URLs with a tab and spaces',
 ]);
 
 // cases the native signer leaves to OpenSSL (UnsupportedError): createSigner falls back and issues the
 // reference's certificate, and shadow mode reports them as unsupported
-const fallsBack = new Set<string>(['template with hash SHA256', 'template with hash with a trailing space']);
+const fallsBack = new Set<string>(['template with hash SHA256']);
 
 // ADR 0005: CSRs with a version other than v1, which the reference refuses and the candidate signs
 const csrVersions = new Set<string>(['CSR version 2 (Meraki MDM)', 'CSR version 2 (SCEP CA request)']);

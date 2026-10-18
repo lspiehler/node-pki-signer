@@ -267,6 +267,15 @@ export const corpus: CorpusCase[] = [
       },
     },
   }),
+  // requesters choose their SANs: config variables must come out literally, not expanded
+  corpusCase({
+    name: 'admin override SANs with config variables',
+    process: {
+      requestoptions: {
+        extensions: { SANs: { DNS: ['$ENV::HOME.example.com'], email: ['${req::prompt}@example.com'] } },
+      },
+    },
+  }),
   // subject values that reach -subj unescaped: admins and templates can set any value
   ...Object.entries({
     slash: 'Ops/Infra',
@@ -278,6 +287,8 @@ export const corpus: CorpusCase[] = [
     'leading and trailing spaces': '  padded  ',
     'two spaces': 'two  spaces',
     'UTF-8': 'Ünïcødé 日本語',
+    // OpenSSL would expand these in openssl.cnf; node-openssl-cert2 0.7.37 escapes them
+    'config variable': '$ENV::HOME ${req::prompt} $$ # x',
   }).map(([what, value]) =>
     corpusCase({
       name: `admin override subject with ${what}`,

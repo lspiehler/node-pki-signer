@@ -1,6 +1,6 @@
 # Differential harness
 
-Phase 0 of ADR 0001. The harness proves that a new signing path issues the same certificates as today's: node-openssl-cert2 `x509.CASignCSR` 0.7.34, which pkiaas master runs. It signs every corpus case with both paths and compares the results. The candidate is the library's native signer, `caSignCSR` (phase 1).
+Phase 0 of ADR 0001. The harness proves that a new signing path issues the same certificates as today's: node-openssl-cert2 `x509.CASignCSR` 0.7.37, which pkiaas master runs. It signs every corpus case with both paths and compares the results. The candidate is the library's native signer, `caSignCSR` (phase 1).
 
 Run it with `npm test`, or only the harness with `node --test test/differential/differential.test.ts` (about 15 seconds). It needs the system `openssl` 3.5 or later, because the reference path calls it.
 
@@ -61,6 +61,7 @@ The native signer reproduces these. The intended differences are in ADR 0002.
 - **Empty usages:** SCEP RA certificates with empty key usage and extended key usage lists get neither extension.
 - **Custom AIA URLs:** `"a, b"` gives two URIs, with the space trimmed.
 - **MS CES template OID:** the leading-space form (`' 1.3.6.1.4.1.311.21.7'`) is accepted.
+- **Refused values (0.7.37):** a control character anywhere in the subject or extensions, and a `hash` with anything but letters, digits, `_` and `-` (so `'sha256 '`). `$`, `#`, quotes and backslashes are escaped in `openssl.cnf`, so they come out literally instead of expanding `$ENV::NAME` or cutting the value.
 
 ## Quirks found
 Quirks 1, 3 and 4 are fixed in the native signer (ADR 0002). Quirk 2 is pkiaas's to fix.
