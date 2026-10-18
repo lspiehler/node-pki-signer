@@ -19,7 +19,6 @@ process.env.TZ = 'UTC';
 
 // cases where the reference path itself refuses to sign; a candidate must refuse them too
 const referenceRejects = new Set<string>([
-  'CSR equals sign in subject',
   // past the year 9999, or past what a JavaScript date holds
   'template with days 9999999',
   'template with days 999999999',
@@ -36,16 +35,11 @@ const fallsBack = new Set<string>(['template with hash SHA256']);
 // ADR 0005: CSRs with a version other than v1, which the reference refuses and the candidate signs
 const csrVersions = new Set<string>(['CSR version 2 (Meraki MDM)', 'CSR version 2 (SCEP CA request)']);
 
-// ADR 0002: where the reference truncates, empties or refuses the subject, the candidate issues the
-// full subject. Each case lists that subject as node:crypto prints it (RFC 2253 escapes).
+// ADR 0002: where the reference empties the subject, the candidate issues the full subject. Each case
+// lists that subject as node:crypto prints it (RFC 2253 escapes). Since node-openssl-cert2 0.7.38 the
+// reference escapes `/`, `+` and `\` in -subj and csr.parse reads subjects correctly, so only nested
+// arrays are left.
 const fullSubjects = new Map<string, string>([
-  // `/`, `+` and `\` cut the reference's -subj short; the CSR cases carry csr.parse's own mangling
-  ['admin override subject with slash', 'C=US\nO=Ops/Infra\nCN=override.example.com'],
-  ['admin override subject with plus', 'C=US\nO=a\\+b\nCN=override.example.com'],
-  ['admin override subject with backslash', 'C=US\nO=back\\\\slash\nCN=override.example.com'],
-  ['CSR slash and backslash in subject', 'C=US\nO=Ops\\, Infra\nCN=back\\\\slash'],
-  // the reference refuses this one: -subj reads the escaped + as a second attribute of the RDN
-  ['CSR punctuation in subject', 'C=US\nO=Smith\\, Jones & Co.\nOU=R&D (Ops)\nCN=a\\+b quoted #1 \\<x\\>\\; y'],
   // templates saved with nested arrays ([["US"]]): the reference issues the attributes before the
   // first nested one, here none
   ['template dev template 3', 'C=US\nST=Louisiana\nL=New Orleans\nO=Example Org\nCN=www.example.com'],

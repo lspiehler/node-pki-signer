@@ -211,11 +211,11 @@ export const corpus: CorpusCase[] = [
     },
   }),
   corpusCase({
-    // csr.parse keeps the escaped +, and -subj then reads it as a multi-valued RDN and refuses it
+    // commas, quotes, an escaped + and RFC 2253 specials; node-openssl-cert2 before 0.7.38 mangled or refused them
     name: 'CSR punctuation in subject',
     csr: { subject: '/C=US/O=Smith, Jones & Co./OU=R&D (Ops)/CN=a\\+b "quoted" #1 <x>; y', config: [] },
   }),
-  // csr.parse turns `a=b` into an attribute named "undefined", which the reference refuses
+  // before node-openssl-cert2 0.7.38, csr.parse turned `a=b` into an attribute named "undefined" and the reference refused it
   corpusCase({ name: 'CSR equals sign in subject', csr: { subject: '/C=US/CN=a\\=b', config: [] } }),
   // ADR 0005: CSRs with version 2 instead of v1 (0), from https://github.com/openssl/openssl/issues/28761;
   // `openssl ca` 3.5 refuses them
