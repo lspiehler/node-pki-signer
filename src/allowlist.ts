@@ -4,10 +4,12 @@
 // every CA key type PKIaaS.io offers, with every hash (test/differential/differential.test.ts)
 const everyCAKey: ReadonlySet<string> = new Set([
   'sha1WithRSAEncryption',
+  'sha224WithRSAEncryption',
   'sha256WithRSAEncryption',
   'sha384WithRSAEncryption',
   'sha512WithRSAEncryption',
   'ecdsa-with-SHA1',
+  'ecdsa-with-SHA224',
   'ecdsa-with-SHA256',
   'ecdsa-with-SHA384',
   'ecdsa-with-SHA512',

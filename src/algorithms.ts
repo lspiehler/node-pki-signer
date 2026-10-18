@@ -36,7 +36,7 @@ const algorithms: Record<string, { oid: string; hash: string | null; nullParamet
 };
 
 // the hashes PKIaaS.io offers; 'default' is OpenSSL's default for the key type
-const hashes = new Set(['sha1', 'sha256', 'sha384', 'sha512', 'default']);
+const hashes = new Set(['sha1', 'sha224', 'sha256', 'sha384', 'sha512', 'default']);
 
 /** The algorithm a key of this type signs with as `openssl ca -md <hash>` does, from its private or public key. */
 export function signatureAlgorithm(key: KeyObject, hash: string): string {

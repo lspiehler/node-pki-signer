@@ -30,7 +30,7 @@ The native signer's own tests (`src/ca-sign-csr.test.ts`) cover what the harness
 ## Corpus (`test/differential/corpus.ts`)
 Options are built the way pkiaas builds them: the CSR goes through node-openssl-cert2's `csr.parse`, then through a copy of pkiaas's `processOptions` (`pkiaas-options.ts`, from `lib/template/processTemplate.js`). Keys, CAs and CSRs are generated on each run.
 - **Templates:** every template shape (`test/corpus/templates.json`), on an RSA-2048 CA. That's the 4 presets plus the 83 other distinct `options` of the 626 templates on dev, with subject values and custom AIA URLs anonymized. A read-only scan of the 7532 production templates (2026-10-18, shapes only, no values) added the cases named `template with …` and `template policy OID …`: very long validities, unusual `hash` spellings, IPsec and Microsoft EKU names, an unknown EKU name, `encipherOnly`/`decipherOnly`, non-critical basic constraints, custom AIA URLs that are empty, not URLs, or padded with a tab and spaces, and a template `policy_oid` that is NULL (a fifth of them), empty or anyPolicy. Production has no nested subject arrays; its other subject shapes are covered by the admin override cases.
-- **CA key types:** all 20 that pkiaas offers. RSA and EC are each run with sha1/256/384/512; ML-DSA and SLH-DSA with `default` (what service certificates use) and `sha256` (what the preset templates carry).
+- **CA key types:** all 20 that pkiaas offers. RSA and EC are each run with sha1/224/256/384/512; ML-DSA and SLH-DSA with `default` (what service certificates use) and `sha256` (what the preset templates carry).
 - **CSRs** shaped like those from:
   - ACME (empty subject)
   - Intune SCEP (UPN otherName, challengePassword)
