@@ -1,6 +1,6 @@
 # Differential harness
 
-Phase 0 of ADR 0001. The harness proves that a new signing path issues the same certificates as today's: node-openssl-cert2 `x509.CASignCSR` 0.7.37, which pkiaas master runs. It signs every corpus case with both paths and compares the results. The candidate is the library's native signer, `caSignCSR` (phase 1).
+Phase 0 of ADR 0001. The harness proves that a new signing path issues the same certificates as today's: node-openssl-cert2 `x509.CASignCSR` 0.7.38, the version pkiaas pins. It signs every corpus case with both paths and compares the results. The candidate is the library's native signer, `caSignCSR` (phase 1).
 
 Run it with `npm test`, or only the harness with `node --test test/differential/differential.test.ts` (about 15 seconds). It needs the system `openssl` 3.5 or later, because the reference path calls it.
 
@@ -12,7 +12,7 @@ For each case, with the validity dates fixed by the options:
 - **`openssl x509 -text`:** the same, apart from the serial number and signature value.
 - **Refusals:** if the reference refuses a case, the candidate must refuse it too (`referenceRejects`).
 - **Fallbacks:** for the cases in `fallsBack`, the native signer throws `UnsupportedError`, so `createSigner` falls back to OpenSSL and issues the reference's certificate. Shadow mode must report them as `unsupported`.
-- **Intended differences (ADR 0002):** for the cases in `fullSubjects`, the reference truncates, empties or refuses the subject. The candidate must issue the full subject listed there, and nothing else may differ.
+- **Intended differences (ADR 0002):** for the cases in `fullSubjects` (templates with nested subject arrays), the reference empties the subject or keeps only part of it. The candidate must issue the full subject listed there, and nothing else may differ.
 - **CSR versions (ADR 0005):** for the cases in `csrVersions`, CSRs with version 2 instead of v1, the reference refuses and the candidate must sign: with the CSR's key, verified by `openssl verify`, and matched by shadow mode.
 
 In phase 0 the candidate was the reference itself, which showed that the corpus and the comparison are deterministic. The harness's own tests check that it reports a missing extension, a changed validity and a refusal.
@@ -64,8 +64,8 @@ The native signer reproduces these. The intended differences are in ADR 0002.
 - **Refused values (0.7.37):** a control character anywhere in the subject or extensions, and a `hash` with anything but letters, digits, `_` and `-` (so `'sha256 '`). `$`, `#`, quotes and backslashes are escaped in `openssl.cnf`, so they come out literally instead of expanding `$ENV::NAME` or cutting the value.
 
 ## Quirks found
-Quirks 1, 3 and 4 are fixed in the native signer (ADR 0002). Quirk 2 is pkiaas's to fix.
-1. **Subjects are silently truncated.** `getDistinguishedName` builds `-subj` escaping only spaces. A `/` or `+` in a subject value cuts the subject at that point, and every later attribute is lost, including the common name. For example, `O=Ops/Infra, CN=host` is issued as `O=Ops`. A backslash disappears. Values can reach `-subj` from templates, admin overrides or CSRs.
-2. **`csr.parse` mangles subjects, and the result depends on attribute order.** `CN=a, b` becomes `a`. `O=Ops/Infra` becomes `Ops, Infra`. Quotes are stripped. A CSR with `=` in a value is refused (`Invalid subject: undefined`), and so is one with an escaped `+` (the `-subj` problem above). This happens in pkiaas before signing, so it's outside this library, but it shapes what the library is given.
+Quirks 1, 3 and 4 are fixed in the native signer (ADR 0002). Quirks 1 and 2 are also fixed in node-openssl-cert2 0.7.38, so the reference no longer differs on them.
+1. **Subjects are silently truncated** (before node-openssl-cert2 0.7.38). `getDistinguishedName` builds `-subj` escaping only spaces. A `/` or `+` in a subject value cuts the subject at that point, and every later attribute is lost, including the common name. For example, `O=Ops/Infra, CN=host` is issued as `O=Ops`. A backslash disappears. Values can reach `-subj` from templates, admin overrides or CSRs.
+2. **`csr.parse` mangles subjects, and the result depends on attribute order** (before node-openssl-cert2 0.7.38). `CN=a, b` becomes `a`. `O=Ops/Infra` becomes `Ops, Infra`. Quotes are stripped. A CSR with `=` in a value is refused (`Invalid subject: undefined`), and so is one with an escaped `+` (the `-subj` problem above). This happens in pkiaas before signing, so it's outside this library, but it shapes what the library is given.
 3. **Validity dates depend on the host's time zone.** `CASignCSR` formats `-startdate`/`-enddate` in local time and appends `Z`. On a host that isn't on UTC, `notBefore` and `notAfter` shift by the UTC offset: in Asia/Tokyo, certificates aren't valid until 9 hours after issue. pkiaas containers and both IoT HSM installs (the Docker image's `TZ=UTC`, and `setup_ubuntu.sh`'s `timedatectl set-timezone UTC`) run on UTC, so only agents whose time zone was changed are affected. The harness pins `TZ=UTC`.
 4. **Nested subject arrays empty the subject.** The pkiaas template editor can save `countryName: [["US"]]` (10 of the 87 template shapes on dev). `getDistinguishedName` throws on it and falls back to `-subj /`, or keeps only the attributes before the nested one. Certificates from these templates have an empty or partial subject, without the CSR's common name.
