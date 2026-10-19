@@ -323,6 +323,9 @@ export const corpus: CorpusCase[] = [
     process: {
       requestoptions: {
         subject: {
+          unstructuredAddress: '1 Main St, New Orleans',
+          unstructuredName: 'device-01.example.com',
+          organizationIdentifier: 'VATUS-12345',
           pseudonym: 'Pseudo',
           dnQualifier: 'qualifier-1',
           generationQualifier: 'Jr.',
@@ -350,6 +353,28 @@ export const corpus: CorpusCase[] = [
       },
     },
   }),
+  // the attributes node-openssl-cert2 0.7.39 added, with UTF-8 values: their string types
+  corpusCase({
+    name: 'admin override subject with UTF-8 organizationIdentifier, unstructuredName and unstructuredAddress',
+    process: {
+      requestoptions: {
+        subject: {
+          organizationIdentifier: 'NTRDE-Société 日本',
+          unstructuredName: 'Gerät 日本',
+          unstructuredAddress: 'Straße 1, Köln',
+          commonName: 'pkcs9.example.com',
+        },
+      },
+    },
+  }),
+  // CSR subjects in other orders are issued in the BR order: DC first, SN and GN before OU and CN
+  ...Object.entries({
+    'DC last': '/CN=dc.example.com/OU=Ops/O=Example Org/DC=example/DC=com',
+    'SN and GN after CN': '/C=US/O=Example Org/OU=People/CN=Ada Lovelace/SN=Lovelace/GN=Ada',
+    'GN before SN, DC in the middle': '/GN=Ada/CN=Ada Lovelace/DC=example/SN=Lovelace/DC=com/C=US',
+    'organizationIdentifier, unstructuredName and unstructuredAddress first':
+      '/unstructuredAddress=1 Main St/unstructuredName=device-01/organizationIdentifier=VATUS-12345/CN=pkcs9.example.com/C=US',
+  }).map(([what, subject]) => corpusCase({ name: `CSR subject order: ${what}`, csr: { subject, config: [] } })),
   // without a subject the CSR's own subject is kept (pkiaas always sends one)
   corpusCase({
     name: 'no subject in options',

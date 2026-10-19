@@ -1,6 +1,6 @@
 # Differential harness
 
-Phase 0 of ADR 0001. The harness proves that a new signing path issues the same certificates as today's: node-openssl-cert2 `x509.CASignCSR` 0.7.38, the version pkiaas pins. It signs every corpus case with both paths and compares the results. The candidate is the library's native signer, `caSignCSR` (phase 1).
+Phase 0 of ADR 0001. The harness proves that a new signing path issues the same certificates as today's: node-openssl-cert2 `x509.CASignCSR` 0.7.39, the version pkiaas pins. It signs every corpus case with both paths and compares the results. The candidate is the library's native signer, `caSignCSR` (phase 1).
 
 Run it with `npm test`, or only the harness with `node --test test/differential/differential.test.ts` (about 15 seconds). It needs the system `openssl` 3.5 or later, because the reference path calls it.
 
@@ -54,9 +54,9 @@ The native signer reproduces these. The intended differences are in ADR 0002.
   - Subject Key Identifier and Authority Key Identifier (key ID only) come first.
   - The rest follow the key order of `options.extensions`. `customOIDs` (template OID, CT poison, SCT list) sit wherever that key is.
   - Subject Alternative Name always comes last.
-- **String types:** `-utf8` with the default `string_mask`, so country, serialNumber and dnQualifier are PrintableString, emailAddress and domainComponent are IA5String, and everything else is UTF8String.
+- **String types:** `-utf8` with the default `string_mask`, so country, serialNumber and dnQualifier are PrintableString, emailAddress and domainComponent are IA5String, and everything else is UTF8String (including organizationIdentifier, unstructuredName and unstructuredAddress, added in 0.7.39).
 - **Subject:** forced from `options.subject` when the options have one. If they don't, the CSR's subject is kept. The CSR's extensions are never copied.
-- **Subject order:** the order of node-openssl-cert2's `signing_policy` (C, ST, L, postalCode, street, O, OU, CN, emailAddress, …), not the order given. Its config sets `preserve = yes`, but `openssl ca` still applies the policy order. Phase 0 missed this because its candidate was the reference.
+- **Subject order:** the order of node-openssl-cert2's `signing_policy` (since 0.7.39 the CA/Browser Forum Baseline Requirements order: DC, C, ST, L, postalCode, street, O, SN, GN, OU, CN, emailAddress, …), not the order given. Its config sets `preserve = yes`, but `openssl ca` still applies the policy order. Phase 0 missed this because its candidate was the reference.
 - **PQC digest:** with ML-DSA and SLH-DSA CAs, `sha256` gives the same certificate as `default`. OpenSSL ignores the digest.
 - **Empty usages:** SCEP RA certificates with empty key usage and extended key usage lists get neither extension.
 - **Custom AIA URLs:** `"a, b"` gives two URIs, with the space trimmed.
