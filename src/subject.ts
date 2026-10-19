@@ -27,12 +27,15 @@ const ub = {
 
 /** The subject attributes node-openssl-cert2 accepts, by its names, in its signing_policy order. */
 const attributes: Record<string, AttributeSpec> = {
+  domainComponent: { oid: '0.9.2342.19200300.100.1.25', type: 'ia5String' },
   countryName: { oid: '2.5.4.6', type: 'printableString', min: 2, max: 2 },
   stateOrProvinceName: { oid: '2.5.4.8', type: 'utf8String', max: ub.state },
   localityName: { oid: '2.5.4.7', type: 'utf8String', max: ub.locality },
   postalCode: { oid: '2.5.4.17', type: 'utf8String' },
   streetAddress: { oid: '2.5.4.9', type: 'utf8String' },
   organizationName: { oid: '2.5.4.10', type: 'utf8String', max: ub.organization },
+  surname: { oid: '2.5.4.4', type: 'utf8String', max: ub.name },
+  givenName: { oid: '2.5.4.42', type: 'utf8String', max: ub.name },
   organizationalUnitName: { oid: '2.5.4.11', type: 'utf8String', max: ub.unit },
   commonName: { oid: '2.5.4.3', type: 'utf8String', max: ub.commonName },
   emailAddress: { oid: '1.2.840.113549.1.9.1', type: 'ia5String', max: ub.email },
@@ -41,15 +44,15 @@ const attributes: Record<string, AttributeSpec> = {
   jurisdictionLocalityName: { oid: '1.3.6.1.4.1.311.60.2.1.1', type: 'utf8String' },
   businessCategory: { oid: '2.5.4.15', type: 'utf8String' },
   serialNumber: { oid: '2.5.4.5', type: 'printableString', max: ub.serial },
-  domainComponent: { oid: '0.9.2342.19200300.100.1.25', type: 'ia5String' },
-  surname: { oid: '2.5.4.4', type: 'utf8String', max: ub.name },
   title: { oid: '2.5.4.12', type: 'utf8String' },
-  givenName: { oid: '2.5.4.42', type: 'utf8String', max: ub.name },
   UID: { oid: '0.9.2342.19200300.100.1.1', type: 'utf8String' },
   initials: { oid: '2.5.4.43', type: 'utf8String', max: ub.name },
   generationQualifier: { oid: '2.5.4.44', type: 'utf8String' },
   dnQualifier: { oid: '2.5.4.46', type: 'printableString' },
   pseudonym: { oid: '2.5.4.65', type: 'utf8String' },
+  organizationIdentifier: { oid: '2.5.4.97', type: 'utf8String' },
+  unstructuredName: { oid: '1.2.840.113549.1.9.2', type: 'utf8String' },
+  unstructuredAddress: { oid: '1.2.840.113549.1.9.8', type: 'utf8String' },
 };
 
 const printable = /^[A-Za-z0-9 '()+,\-./:=?]*$/;

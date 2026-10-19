@@ -46,7 +46,7 @@
     "@peculiar/asn1-schema": "2.10.0",
     "@peculiar/asn1-x509": "2.10.0",
     "asn1js": "3.0.10",
-    "node-openssl-cert2": "0.7.38"
+    "node-openssl-cert2": "0.7.39"
   },
   "peerDependencies": {
     "@google-cloud/kms": "^6.2.1",
