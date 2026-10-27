@@ -23,6 +23,9 @@ const referenceRejects = new Set<string>([
   'template with days 9999999',
   'template with days 999999999',
   'template with unknown EKU name',
+  // X.660: OpenSSL refuses a second number above 39 under 0 and 1
+  'template with EKU OID 1.40',
+  'template policy OID 1.40',
   // node-openssl-cert2 0.7.37 refuses hashes with other characters and control characters anywhere
   'template with hash with a trailing space',
   'template with custom AIA URLs with a tab and spaces',
@@ -30,7 +33,15 @@ const referenceRejects = new Set<string>([
 
 // cases the native signer leaves to OpenSSL (UnsupportedError): createSigner falls back and issues the
 // reference's certificate, and shadow mode reports them as unsupported
-const fallsBack = new Set<string>(['template with hash SHA256']);
+const fallsBack = new Set<string>([
+  'template with hash SHA256',
+  // numbers of 15 digits or more, which asn1js 3.0.10 can encode wrongly
+  'template with EKU OID with a 15-digit number',
+  'template policy OID with a 15-digit number',
+  'template policy OID with a 2^53 number',
+  'CSR RID and otherName with a 15-digit number',
+  'custom OID with a 15-digit number',
+]);
 
 // ADR 0005: CSRs with a version other than v1, which the reference refuses and the candidate signs
 const csrVersions = new Set<string>(['CSR version 2 (Meraki MDM)', 'CSR version 2 (SCEP CA request)']);
