@@ -36,7 +36,16 @@ import { SignerError, UnsupportedError } from './errors.ts';
 
 const step = 'build extensions';
 
-const oidPattern = /^([0-2])((\.0)|(\.[1-9][0-9]*))*$/;
+// X.660: under 0 and 1 the second number is below 40
+const oidPattern = /^([01]\.([0-9]|[1-3][0-9])|2\.(0|[1-9][0-9]*))(\.(0|[1-9][0-9]*))*$/;
+
+// asn1js 3.0.10 encodes some numbers of 2^49 and more wrongly, so OIDs with a number of 15 digits or more (10^14 is
+// below 2^49) go to OpenSSL
+function isOID(value: string, what: string): boolean {
+  if (!oidPattern.test(value)) return false;
+  if (/[0-9]{15}/.test(value)) throw new UnsupportedError(step, `${what} with a number of 15 digits or more`);
+  return true;
+}
 const printable = /^[A-Za-z0-9 '()+,\-./:=?]*$/;
 
 // OpenSSL copies a config value's bytes into an IA5String as they are, so non-ASCII text comes out as
@@ -114,7 +123,7 @@ function extendedKeyUsage(value: unknown): Extension | undefined {
   if (!eku) return undefined;
   const oids = eku.usages.map((usage) => {
     if (typeof usage === 'string' && Object.hasOwn(extendedKeyUsages, usage)) return extendedKeyUsages[usage] ?? '';
-    if (typeof usage === 'string' && oidPattern.test(usage)) return usage;
+    if (typeof usage === 'string' && isOID(usage, 'extendedKeyUsage')) return usage;
     throw new SignerError(step, `invalid extendedKeyUsage ${String(usage)}`);
   });
   return extension(id_ce_extKeyUsage, eku.critical, der(new ExtendedKeyUsage(oids)));
@@ -182,7 +191,7 @@ function policies(value: unknown): Extension | undefined {
   for (const policy of list(value, 'policies')) {
     const { policyIdentifier, CPS, userNotice } = (policy ?? {}) as Record<string, unknown>;
     if (!policyIdentifier) continue;
-    if (typeof policyIdentifier !== 'string' || !oidPattern.test(policyIdentifier)) {
+    if (typeof policyIdentifier !== 'string' || !isOID(policyIdentifier, 'policy identifier')) {
       throw new UnsupportedError(step, `policy identifier ${JSON.stringify(policyIdentifier)}`);
     }
     if (userNotice) throw new UnsupportedError(step, 'policy user notices');
@@ -225,7 +234,7 @@ function customOID(value: unknown): Extension {
     throw new SignerError(step, 'customOIDs need an OID and a value');
   }
   const oid = OID.trim();
-  if (!oidPattern.test(oid)) throw new UnsupportedError(step, `customOIDs OID ${oid}`);
+  if (!isOID(oid, 'customOIDs OID')) throw new UnsupportedError(step, `customOIDs OID ${oid}`);
   const match = /^(critical\s*,\s*)?(DER|ASN1):(.*)$/s.exec(setting.trim());
   if (!match) throw new UnsupportedError(step, `customOIDs value for ${oid}`);
   const [, critical, form, rest = ''] = match;
@@ -253,7 +262,7 @@ function generalName(type: string, value: unknown): GeneralName {
       if (trimmed.includes('.') && trimmed.includes(':')) throw new UnsupportedError(step, 'IPv4-mapped IPv6 SANs');
       return new GeneralName({ iPAddress: trimmed });
     case 'RID':
-      if (!oidPattern.test(trimmed)) throw new UnsupportedError(step, `SANs RID ${trimmed}`);
+      if (!isOID(trimmed, 'SANs RID')) throw new UnsupportedError(step, `SANs RID ${trimmed}`);
       return new GeneralName({ registeredID: trimmed });
     case 'otherName': {
       // <OID or short name>;UTF8:<text>
@@ -261,7 +270,7 @@ function generalName(type: string, value: unknown): GeneralName {
       const name = match?.[1]?.trim() ?? '';
       const typeId = Object.hasOwn(otherNameTypes, name)
         ? otherNameTypes[name]
-        : oidPattern.test(name)
+        : isOID(name, 'SANs otherName')
           ? name
           : undefined;
       const text = match?.[3] ?? '';

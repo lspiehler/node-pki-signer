@@ -248,6 +248,25 @@ export const corpus: CorpusCase[] = [
       ],
     },
   }),
+  corpusCase({
+    name: 'CSR RID and otherName with a 15-digit number',
+    csr: {
+      subject: '/CN=rid.example.com',
+      config: [
+        'subjectAltName = DNS:rid.example.com, RID:1.3.6.1.4.1.562949953421312, ' +
+          'otherName:1.3.6.1.4.1.562949953421312;UTF8:device@example.com',
+      ],
+    },
+  }),
+  corpusCase({
+    name: 'custom OID with a 15-digit number',
+    adjust: (options) => {
+      options.extensions = {
+        ...options.extensions,
+        customOIDs: [{ OID: '1.3.6.1.4.1.562949953421312', value: 'ASN1:NULL' }],
+      };
+    },
+  }),
   // must-staple: csr.parse passes the CSR's TLS feature extension through as `tlsfeature`
   corpusCase({
     name: 'CSR must-staple (TLS feature)',
@@ -398,6 +417,13 @@ export const corpus: CorpusCase[] = [
         usages: ['ipsecIKE', 'ipsecEndSystem', 'ipsecTunnel', 'ipsecUser', 'msCTLSign', 'msEFS'],
       }),
     'unknown EKU name': (t) => (t.extensions.extendedKeyUsage = { usages: ['serverAuth', 'notAnEKUName'] }),
+    // X.660: OpenSSL refuses a second number above 39 under 0 and 1; asn1js encoded 1.40 as 2.0
+    'EKU OID 1.40': (t) => (t.extensions.extendedKeyUsage = { usages: ['serverAuth', '1.40'] }),
+    // asn1js 3.0.10 encodes some numbers of 2^49 (15 digits) and more wrongly
+    'EKU OID with a 14-digit number': (t) =>
+      (t.extensions.extendedKeyUsage = { usages: ['serverAuth', '1.3.6.1.4.1.99999999999999'] }),
+    'EKU OID with a 15-digit number': (t) =>
+      (t.extensions.extendedKeyUsage = { usages: ['serverAuth', '1.3.6.1.4.1.562949953421312'] }),
     'encipherOnly and decipherOnly': (t) =>
       (t.extensions.keyUsage = {
         critical: true,
@@ -422,7 +448,15 @@ export const corpus: CorpusCase[] = [
     return corpusCase({ name: `template with ${what}`, template: t });
   }),
   // a template's policy_oid is NULL in a fifth of production's templates, and can be empty or anyPolicy
-  ...Object.entries({ NULL: null, empty: '', anyPolicy: '2.5.29.32.0' }).map(([what, policy_oid]) =>
+  ...Object.entries({
+    NULL: null,
+    empty: '',
+    anyPolicy: '2.5.29.32.0',
+    '1.40': '1.40',
+    'with a 14-digit number': '1.2.99999999999999',
+    'with a 15-digit number': '1.2.562949953421312',
+    'with a 2^53 number': '1.2.9007199254740993',
+  }).map(([what, policy_oid]) =>
     corpusCase({
       name: `template policy OID ${what}`,
       process: { template: { policy_oid, ct_logs: null } },
