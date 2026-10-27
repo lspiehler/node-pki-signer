@@ -35,12 +35,9 @@ const referenceRejects = new Set<string>([
 // reference's certificate, and shadow mode reports them as unsupported
 const fallsBack = new Set<string>([
   'template with hash SHA256',
-  // numbers of 15 digits or more, which asn1js 3.0.10 can encode wrongly
-  'template with EKU OID with a 15-digit number',
-  'template policy OID with a 15-digit number',
-  'template policy OID with a 2^53 number',
-  'CSR RID and otherName with a 15-digit number',
-  'custom OID with a 15-digit number',
+  // a second number of 16 digits or more under 2, which asn1js 4.0.0 encodes as an empty OID
+  'template with EKU OID with a 16-digit second number under 2',
+  'template policy OID with a 2^53 - 80 second number under 2',
 ]);
 
 // ADR 0005: CSRs with a version other than v1, which the reference refuses and the candidate signs

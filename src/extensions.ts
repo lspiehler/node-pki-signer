@@ -39,11 +39,13 @@ const step = 'build extensions';
 // X.660: under 0 and 1 the second number is below 40
 const oidPattern = /^([01]\.([0-9]|[1-3][0-9])|2\.(0|[1-9][0-9]*))(\.(0|[1-9][0-9]*))*$/;
 
-// asn1js 3.0.10 encodes some numbers of 2^49 and more wrongly, so OIDs with a number of 15 digits or more (10^14 is
-// below 2^49) go to OpenSSL; docs/upstream-issues.md says when this can be narrowed
+// asn1js 4.0.0 adds 80 to the second number under 2 as a JavaScript number, so from 2^53 - 80 it encodes an empty
+// OID; OIDs with a second number of 16 digits or more under 2 (10^15 is below 2^53 - 80) go to OpenSSL.
+// docs/upstream-issues.md says when this can go
 function isOID(value: string, what: string): boolean {
   if (!oidPattern.test(value)) return false;
-  if (/[0-9]{15}/.test(value)) throw new UnsupportedError(step, `${what} with a number of 15 digits or more`);
+  if (/^2\.[0-9]{16}/.test(value))
+    throw new UnsupportedError(step, `${what} with a second number of 16 digits or more`);
   return true;
 }
 

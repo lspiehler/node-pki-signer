@@ -419,11 +419,16 @@ export const corpus: CorpusCase[] = [
     'unknown EKU name': (t) => (t.extensions.extendedKeyUsage = { usages: ['serverAuth', 'notAnEKUName'] }),
     // X.660: OpenSSL refuses a second number above 39 under 0 and 1; asn1js encoded 1.40 as 2.0
     'EKU OID 1.40': (t) => (t.extensions.extendedKeyUsage = { usages: ['serverAuth', '1.40'] }),
-    // asn1js 3.0.10 encodes some numbers of 2^49 (15 digits) and more wrongly
+    // asn1js 3.0.10 encoded some numbers of 2^49 (15 digits) and more wrongly
     'EKU OID with a 14-digit number': (t) =>
       (t.extensions.extendedKeyUsage = { usages: ['serverAuth', '1.3.6.1.4.1.99999999999999'] }),
     'EKU OID with a 15-digit number': (t) =>
       (t.extensions.extendedKeyUsage = { usages: ['serverAuth', '1.3.6.1.4.1.562949953421312'] }),
+    // asn1js 4.0.0 encodes a second number under 2 from 2^53 - 80 as an empty OID
+    'EKU OID with a 15-digit second number under 2': (t) =>
+      (t.extensions.extendedKeyUsage = { usages: ['serverAuth', '2.999999999999999.1'] }),
+    'EKU OID with a 16-digit second number under 2': (t) =>
+      (t.extensions.extendedKeyUsage = { usages: ['serverAuth', '2.1000000000000000.1'] }),
     'encipherOnly and decipherOnly': (t) =>
       (t.extensions.keyUsage = {
         critical: true,
@@ -456,6 +461,10 @@ export const corpus: CorpusCase[] = [
     'with a 14-digit number': '1.2.99999999999999',
     'with a 15-digit number': '1.2.562949953421312',
     'with a 2^53 number': '1.2.9007199254740993',
+    'with a 2^56 number': '1.2.72057594037927936',
+    'with a UUID (2.25)': '2.25.329800735698586629295641978511506172918',
+    'with a 15-digit second number under 2': '2.999999999999999',
+    'with a 2^53 - 80 second number under 2': '2.9007199254740912',
   }).map(([what, policy_oid]) =>
     corpusCase({
       name: `template policy OID ${what}`,
