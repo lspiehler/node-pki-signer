@@ -18,13 +18,15 @@ Measured against OpenSSL 3.5 (`openssl asn1parse -genstr OID:<oid>`) for the thi
 
 Reported upstream: not yet (the second-number and X.660 rows).
 
+The signer uses asn1js 4.0.0 with `@peculiar/asn1-*` 3.0.0 since 0.3.7 (0.3.6 and earlier: asn1js 3.0.10).
+
 **What the signer does** (`src/extensions.ts`, `isOID`), for every OID it takes from input (extended key usages, policy identifiers, `customOIDs`, SAN RIDs and otherName types):
 - OIDs that break X.660 are refused, as OpenSSL refuses them.
-- An OID with a number of 15 digits or more (10^14 is below 2^49) throws `UnsupportedError`, so `createSigner` falls back to OpenSSL, which encodes it correctly.
+- An OID under 2 with a second number of 16 digits or more (10^15 is below 2^53 − 80) throws `UnsupportedError`, so `createSigner` falls back to OpenSSL, which encodes it correctly. Until 0.3.6, with asn1js 3.0.10, this applied to any number of 15 digits or more.
 
 Shadow mode reads extension OIDs back with asn1js (`src/tbs-fields.ts`). A misread OID only changes the name it compares the extension under, never the bytes it compares.
 
-**When this can change:** after moving to asn1js 4.0.0, which needs `@peculiar/asn1-*` 3.x (asn1js is their peer dependency), the fallback can be narrowed to a second number of 16 digits or more under 2. When asn1js also encodes those correctly, the fallback can go. Either way, first narrow `isOID`, then check that the corpus cases `template policy OID with a 15-digit number`, `template policy OID with a 2^53 number`, `template with EKU OID with a 15-digit number`, `CSR RID and otherName with a 15-digit number` and `custom OID with a 15-digit number` are signed natively and byte-identical: move them from `fallsBack` to the cases that must match, and add one for the largest number that is still left to OpenSSL.
+**When this can change:** when asn1js encodes a second number under 2 from 2^53 − 80 correctly, remove the check from `isOID` and move the corpus cases `template with EKU OID with a 16-digit second number under 2` and `template policy OID with a 2^53 - 80 second number under 2` from `fallsBack` to the cases that must match. The cases with large numbers after the second one (15 digits, 2^53, 2^56, a 2.25 UUID) already must match byte for byte.
 
 To check a new asn1js version directly, compare its encoding with OpenSSL's:
 
