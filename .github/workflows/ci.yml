@@ -1,9 +1,12 @@
 name: CI
 
+# Changes to documentation alone don't run the tests: no test or build step reads it.
 on:
   push:
     branches: [master]
+    paths-ignore: ['**.md', 'docs/**']
   pull_request:
+    paths-ignore: ['**.md', 'docs/**']
   workflow_dispatch:
 
 concurrency:
