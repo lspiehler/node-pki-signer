@@ -1,9 +1,10 @@
 // The certificate subject from options.subject. Every value is kept exactly as given, one per RDN
-// (ADR 0002), in the order of node-openssl-cert2's signing_policy, which `openssl ca` applies. String types and size limits are OpenSSL's for `openssl ca -utf8` with the
+// (ADR 0002), in the order of node-openssl-cert2's signing_policy, which `openssl ca` applies, or as given
+// with preserveDN (`openssl ca -preserveDN`). String types and size limits are OpenSSL's for `openssl ca -utf8` with the
 // default string_mask (utf8only): PrintableString or IA5String where X.520 or PKCS #9 require it,
 // UTF8String everywhere else.
 import { AttributeTypeAndValue, AttributeValue, Name, RelativeDistinguishedName } from '@peculiar/asn1-x509';
-import { SignerError } from './errors.ts';
+import { SignerError, UnsupportedError } from './errors.ts';
 
 type StringType = 'printableString' | 'ia5String' | 'utf8String';
 
@@ -60,6 +61,8 @@ const printable = /^[A-Za-z0-9 '()+,\-./:=?]*$/;
 const ia5 = /^[\x00-\x7f]*$/;
 
 function attributeValue(name: string, spec: AttributeSpec, value: string): AttributeValue {
+  // asn1js can't encode a lone surrogate; OpenSSL writes U+FFFD
+  if (!value.isWellFormed()) throw new UnsupportedError('build subject', `${name} has a lone surrogate`);
   // OpenSSL counts characters, not bytes
   const length = Array.from(value).length;
   if (spec.min !== undefined && length < spec.min) {
@@ -77,28 +80,73 @@ function attributeValue(name: string, spec: AttributeSpec, value: string): Attri
   return new AttributeValue({ [spec.type]: value });
 }
 
-/** The subject Name; an empty one for a false, null or missing subject. */
-export function buildSubject(subject: Record<string, unknown> | false | null | undefined): Name {
-  const given = subject === false ? {} : (subject ?? {});
-  for (const name of Object.keys(given)) {
-    if (!Object.hasOwn(attributes, name)) throw new SignerError('build subject', `invalid attribute ${name}`);
+/** A subject value as a string; ADR 0002: numbers are issued as text (`postalCode: 70112`). */
+function text(name: string, value: unknown): string {
+  if (typeof value === 'string') return value;
+  if ((typeof value === 'number' && Number.isFinite(value)) || typeof value === 'bigint') return String(value);
+  throw new SignerError('build subject', `${name} is not a string`);
+}
+
+/** The (name, value) pairs of a subject object or of an ordered list [{ type, value }], in the given order. */
+function pairs(subject: unknown): [string, string][] {
+  if (Array.isArray(subject)) {
+    // an empty list is an empty subject, as node-openssl-cert2 writes `-subj /`
+    return subject.map((entry: unknown, i) => {
+      const { type, value } = (entry ?? {}) as { type?: unknown; value?: unknown };
+      if (typeof type !== 'string' || !Object.hasOwn(attributes, type)) {
+        throw new SignerError('build subject', `invalid attribute ${i}`);
+      }
+      return [type, text(type, value)];
+    });
   }
-  const rdns: RelativeDistinguishedName[] = [];
-  for (const [name, spec] of Object.entries(attributes)) {
-    if (!Object.hasOwn(given, name)) continue;
-    const values = given[name];
+  const given = (subject ?? {}) as Record<string, unknown>;
+  return Object.entries(given).flatMap(([name, values]) => {
+    if (!Object.hasOwn(attributes, name)) throw new SignerError('build subject', `invalid attribute ${name}`);
     // pkiaas's template editor can save [["US"]]; ADR 0002 issues it as US
     const list: unknown[] = Array.isArray(values) ? values.flat(Infinity) : [values];
-    for (const value of list) {
-      if (typeof value !== 'string') throw new SignerError('build subject', `${name} is not a string`);
-      // like `openssl -subj`, which skips attributes without a value
-      if (value === '') continue;
-      rdns.push(
-        new RelativeDistinguishedName([
-          new AttributeTypeAndValue({ type: spec.oid, value: attributeValue(name, spec, value) }),
-        ]),
-      );
-    }
+    return list.map((value): [string, string] => [name, text(name, value)]);
+  });
+}
+
+const policyOrder = Object.keys(attributes);
+const policyOIDs = policyOrder.map((name) => attributes[name]?.oid);
+
+/**
+ * A CSR's subject as `openssl ca` issues it without `-subj`: in signing_policy order, repeated attributes in
+ * their given order, or as it is with preserveDN.
+ */
+export function orderSubject(subject: Name, preserveDN = false): Name {
+  if (preserveDN) return subject;
+  const rank = (rdn: RelativeDistinguishedName): number => {
+    const oid = rdn.length === 1 ? rdn[0]?.type : undefined;
+    const index = oid === undefined ? -1 : policyOIDs.indexOf(oid);
+    // OpenSSL splits multi-valued RDNs and leaves out attributes outside the policy
+    if (index < 0) throw new UnsupportedError('build subject', 'a CSR subject attribute outside the signing policy');
+    return index;
+  };
+  // Array.prototype.sort is stable
+  return new Name([...subject].sort((a, b) => rank(a) - rank(b)));
+}
+
+/**
+ * The subject Name; an empty one for a false, null or missing subject. Without `preserveDN` the attributes
+ * follow the signing_policy order and repeated ones keep their given order, as `openssl ca` does.
+ */
+export function buildSubject(subject: unknown, preserveDN = false): Name {
+  const given = pairs(subject === false ? {} : subject);
+  // Array.prototype.sort is stable
+  if (!preserveDN) given.sort(([a], [b]) => policyOrder.indexOf(a) - policyOrder.indexOf(b));
+  const rdns: RelativeDistinguishedName[] = [];
+  for (const [name, value] of given) {
+    // like `openssl -subj`, which skips attributes without a value
+    if (value === '') continue;
+    const spec = attributes[name];
+    if (!spec) throw new SignerError('build subject', `invalid attribute ${name}`);
+    rdns.push(
+      new RelativeDistinguishedName([
+        new AttributeTypeAndValue({ type: spec.oid, value: attributeValue(name, spec, value) }),
+      ]),
+    );
   }
   return new Name(rdns);
 }

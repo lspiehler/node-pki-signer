@@ -24,7 +24,7 @@ import { buildExtensions } from './extensions.ts';
 import { selectKey, type KeySettings } from './keys.ts';
 import type { SignParams, SignResult } from './options.ts';
 import type { SigningKey } from './signing-key.ts';
-import { buildSubject } from './subject.ts';
+import { buildSubject, orderSubject } from './subject.ts';
 
 const verifyAsync = promisify(verify);
 
@@ -59,14 +59,19 @@ async function parseCSR(pem: string) {
   const raw = csr.certificationRequestInfoRaw;
   if (!raw) throw new SignerError('parse CSR', 'no certification request info');
   // `openssl ca` refuses a request whose self-signature doesn't verify
-  const hash = verifyHash(csr.signatureAlgorithm.algorithm);
-  let verified: boolean;
+  let publicKey: KeyObject;
   try {
-    const publicKey = createPublicKey({
+    publicKey = createPublicKey({
       key: Buffer.from(AsnConvert.serialize(info.subjectPKInfo)),
       format: 'der',
       type: 'spki',
     });
+  } catch (err) {
+    throw new UnsupportedError('verify CSR signature', err instanceof Error ? err.message : String(err));
+  }
+  const hash = verifyHash(csr.signatureAlgorithm.algorithm, publicKey);
+  let verified: boolean;
+  try {
     verified = await verifyAsync(hash, new Uint8Array(raw), publicKey, new Uint8Array(csr.signature));
   } catch (err) {
     throw new UnsupportedError('verify CSR signature', err instanceof Error ? err.message : String(err));
@@ -105,6 +110,8 @@ function date(value: unknown, name: string): Date {
   // GeneralizedTime has four-digit years, and `openssl ca` refuses dates it can't write
   const year = parsed.getUTCFullYear();
   if (Number.isNaN(year) || year < 0 || year > 9999) throw new SignerError('build TBS', `invalid ${name}`);
+  // RFC 5280 writes years before 1950 as GeneralizedTime, which @peculiar/asn1-x509 only does from 2050
+  if (year < 1950) throw new UnsupportedError('build TBS', `${name} before 1950`);
   // OpenSSL takes whole seconds, always as UTC (ADR 0002)
   return new Date(Math.floor(parsed.getTime() / 1000) * 1000);
 }
@@ -159,6 +166,10 @@ export async function parseRequest(params: SignParams): Promise<{ info: CSRInfo;
 
 /** The validity from the options: startdate to enddate, or `days` from now without a startdate. */
 export function validity(options: SignParams['options']): Validity {
+  // `openssl ca` refuses -days 0 or less
+  if (!options.startdate && options.days !== undefined && !(options.days > 0)) {
+    throw new SignerError('build TBS', 'days must be more than 0');
+  }
   const startdate = options.startdate ? date(options.startdate, 'startdate') : date(undefined, 'startdate');
   const enddate = options.startdate
     ? date(options.enddate, 'enddate')
@@ -207,7 +218,11 @@ export function buildTBS(
       ),
     }),
     ...buildExtensions(options.extensions),
-  ];
+  ].reduce<Extension[]>(
+    // `openssl ca` adds extensions with X509V3_CTX_REPLACE: a later one with the same OID removes the earlier one
+    (kept, ext) => [...kept.filter((earlier) => earlier.extnID !== ext.extnID), ext],
+    [],
+  );
 
   try {
     return new TBSCertificate({
@@ -217,7 +232,9 @@ export function buildTBS(
       issuer: issuer.subject,
       validity: dates,
       // the subject is forced from the options when they have one (`-subj`); the CSR's extensions are never copied
-      subject: Object.hasOwn(options, 'subject') ? buildSubject(options.subject) : info.subject,
+      subject: Object.hasOwn(options, 'subject')
+        ? buildSubject(options.subject, options.preserveDN === true)
+        : orderSubject(info.subject, options.preserveDN === true),
       subjectPublicKeyInfo: spki,
       extensions: new Extensions(extensions),
     });

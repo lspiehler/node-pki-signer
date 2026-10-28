@@ -6,6 +6,7 @@ import { spawn } from 'node:child_process';
 import { signatureHash } from './algorithms.ts';
 import { SignerError } from './errors.ts';
 import type { Pkcs11KeyRef } from './options.ts';
+import { parsePkcs11URI } from './pkcs11-key.ts';
 import type { SigningKey } from './signing-key.ts';
 
 /** The private key OpenSSL signs with: a PEM, or a key on a PKCS#11 token through pkcs11-provider. */
@@ -24,6 +25,8 @@ export function opensslKey(
   const hash = signatureHash(algorithm);
   const digest = hash ? [`-${hash}`] : [];
   const pkcs11 = 'pkcs11' in source ? source.pkcs11 : undefined;
+  // openssl reads any other -sign value as a key file, or as an option when it starts with -
+  if (pkcs11) parsePkcs11URI(pkcs11.uri);
   const passphrase = pkcs11 ? pkcs11.pin : 'pem' in source ? source.passphrase : undefined;
   // a PEM goes in on fd 4 through a pipe bash opens, since openssl can't open the socket Node passes
   const [command, args] = pkcs11

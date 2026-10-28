@@ -1,6 +1,6 @@
 {
   "name": "node-pki-signer",
-  "version": "0.3.7",
+  "version": "0.3.8",
   "description": "Fast in-process X.509 signing for PKIaaS.io and IoT HSM: software keys, PKCS#11, Google Cloud KMS, post-quantum, with OpenSSL fallback",
   "type": "module",
   "exports": {
