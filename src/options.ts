@@ -30,8 +30,14 @@ export interface Pkcs11KeyRef {
 /** The options object pkiaas builds in lib/template/processTemplate.js. */
 export interface SignOptions {
   hash?: string;
-  /** the certificate's subject in this order; false or null for an empty subject */
-  subject?: Record<string, string | string[]> | false | null;
+  /**
+   * the certificate's subject: attributes by name, or an ordered list as node-openssl-cert2's csr.parse
+   * returns it (`subjectList`); false or null for an empty subject. Issued in signing_policy order unless
+   * `preserveDN` is true.
+   */
+  subject?: Record<string, string | number | (string | number)[]> | { type: string; value: string }[] | false | null;
+  /** issue the subject in the given order (`openssl ca -preserveDN`) */
+  preserveDN?: boolean;
   extensions?: Record<string, unknown> | null;
   startdate?: Date | string | number;
   enddate?: Date | string | number;

@@ -2,7 +2,7 @@
 // a CSR's self-signature.
 import { AlgorithmIdentifier } from '@peculiar/asn1-x509';
 import type { KeyObject } from 'node:crypto';
-import { UnsupportedError } from './errors.ts';
+import { SignerError, UnsupportedError } from './errors.ts';
 
 const rsa = '1.2.840.113549.1.1';
 const ecdsa = '1.2.840.10045.4';
@@ -68,10 +68,27 @@ export function algorithmIdentifier(name: string): AlgorithmIdentifier {
   });
 }
 
-/** The hash node:crypto needs to verify a signature with this algorithm OID (null: none). */
-export function verifyHash(oid: string): string | null {
-  for (const algorithm of Object.values(algorithms)) {
-    if (algorithm.oid === oid) return algorithm.hash;
+// node:crypto's asymmetricKeyType for the key an algorithm signs with, e.g. ML-DSA-65 is ml-dsa-65
+const keyType = (name: string): string =>
+  name.endsWith('WithRSAEncryption') ? 'rsa' : name.startsWith('ecdsa-') ? 'ec' : name.toLowerCase();
+
+/**
+ * The hash node:crypto needs to verify a signature with this algorithm OID (null: none). With `key`, the
+ * algorithm must be one for its type, as `openssl req -verify` requires: node:crypto would verify with whatever
+ * the key implies.
+ */
+export function verifyHash(oid: string, key?: KeyObject): string | null {
+  for (const [name, algorithm] of Object.entries(algorithms)) {
+    if (algorithm.oid !== oid) continue;
+    const type = key?.asymmetricKeyType;
+    if (key && type !== keyType(name)) {
+      // e.g. an RSA-PSS key; leave it to OpenSSL
+      if (!type || !Object.keys(algorithms).some((other) => keyType(other) === type)) {
+        throw new UnsupportedError('verify CSR signature', `key type ${type ?? 'unknown'}`);
+      }
+      throw new SignerError('verify CSR signature', `the signature algorithm ${name} is not for a ${type} key`);
+    }
+    return algorithm.hash;
   }
   throw new UnsupportedError('verify CSR signature', `no signature algorithm ${oid}`);
 }

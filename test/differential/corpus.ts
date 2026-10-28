@@ -524,6 +524,116 @@ export const corpus: CorpusCase[] = [
       }),
     ];
   }),
+  // review of 0.3.7 (2026-10-28): subject order, repeated extensions and values OpenSSL refuses
+  ...Object.entries({
+    'subject with preserveDN': (o) => {
+      o.preserveDN = true;
+      o.subject = { commonName: 'p.example.com', organizationalUnitName: ['B', 'A'], countryName: 'US' };
+    },
+    'subject list': (o) =>
+      (o.subject = [
+        { type: 'commonName', value: 'l.example.com' },
+        { type: 'organizationalUnitName', value: 'B' },
+        { type: 'countryName', value: 'US' },
+        { type: 'organizationalUnitName', value: '' },
+      ]),
+    'subject list with preserveDN': (o) => {
+      o.preserveDN = true;
+      o.subject = [
+        { type: 'commonName', value: 'l.example.com' },
+        { type: 'organizationalUnitName', value: 'B' },
+        { type: 'countryName', value: 'US' },
+        { type: 'organizationalUnitName', value: 'A' },
+      ];
+    },
+    'subject empty list': (o) => (o.subject = []),
+    'subject number': (o) => (o.subject = { commonName: 'n.example.com', postalCode: 70112 }),
+    'subject number in an array': (o) => (o.subject = { commonName: 'n.example.com', postalCode: [70112] }),
+    'subject with a lone surrogate': (o) => (o.subject = { commonName: 'a\uD800b.example.com' }),
+    'customOID basicConstraints': (o) =>
+      (o.extensions = { ...o.extensions, customOIDs: [{ OID: '2.5.29.19', value: 'critical,DER:30:03:01:01:FF' }] }),
+    'customOID subjectKeyIdentifier': (o) =>
+      (o.extensions = { ...o.extensions, customOIDs: [{ OID: '2.5.29.14', value: 'DER:04:02:01:02' }] }),
+    'customOID subjectAltName': (o) =>
+      (o.extensions = {
+        ...o.extensions,
+        customOIDs: [{ OID: '2.5.29.17', value: 'DER:30:0D:82:0B:78:2E:65:78:61:6D:70:6C:65:2E:63' }],
+      }),
+    'the same customOID twice': (o) =>
+      (o.extensions = {
+        ...o.extensions,
+        customOIDs: [
+          { OID: '1.2.3.4', value: 'ASN1:NULL' },
+          { OID: '1.2.3.5', value: 'ASN1:NULL' },
+          { OID: '1.2.3.4', value: 'DER:05:00:00' },
+        ],
+      }),
+    'SANs IPv6 with a zone': (o) => (o.extensions = { ...o.extensions, SANs: { IP: ['fe80::1%eth0'] } }),
+    'pathlen 1.5': (o) =>
+      (o.extensions = { ...o.extensions, basicConstraints: { critical: true, CA: true, pathlen: 1.5 } }),
+    'pathlen 1e21': (o) =>
+      (o.extensions = { ...o.extensions, basicConstraints: { critical: true, CA: true, pathlen: 1e21 } }),
+    'pathlen 2^53': (o) =>
+      (o.extensions = { ...o.extensions, basicConstraints: { critical: true, CA: true, pathlen: 2 ** 53 } }),
+    'days 0': (o) => {
+      delete o.startdate;
+      delete o.enddate;
+      o.days = 0;
+    },
+    'days -5': (o) => {
+      delete o.startdate;
+      delete o.enddate;
+      o.days = -5;
+    },
+    'startdate 1940': (o) => {
+      o.startdate = new Date('1940-01-01T00:00:00Z');
+      o.enddate = new Date('1941-01-01T00:00:00Z');
+    },
+  } satisfies Record<string, (o: SignOptions) => unknown>).map(([name, adjust]) => corpusCase({ name, adjust })),
+  corpusCase({
+    name: 'CSR subject CN first, without a subject',
+    csr: { subject: '/CN=www.example.com/O=Example Org/C=US' },
+    adjust: (o) => delete o.subject,
+  }),
+  corpusCase({
+    name: 'CSR subject CN first, without a subject, with preserveDN',
+    csr: { subject: '/CN=www.example.com/O=Example Org/C=US' },
+    adjust: (o) => {
+      delete o.subject;
+      o.preserveDN = true;
+    },
+  }),
+  corpusCase({
+    name: 'CSR subject outside the signing policy, without a subject',
+    csr: { subject: '/CN=www.example.com/description=Lab printer' },
+    adjust: (o) => delete o.subject,
+  }),
+  corpusCase({
+    name: 'CSR subject only outside the signing policy, without a subject',
+    csr: { subject: '/description=Lab printer' },
+    adjust: (o) => delete o.subject,
+  }),
+  corpusCase({
+    name: 'CSR subject outside the signing policy, without a subject, with preserveDN',
+    csr: { subject: '/CN=www.example.com/description=Lab printer' },
+    adjust: (o) => {
+      delete o.subject;
+      o.preserveDN = true;
+    },
+  }),
+  corpusCase({
+    name: 'CSR subject with a multi-valued RDN, without a subject',
+    csr: { subject: '/CN=www.example.com+OU=Lab/C=US' },
+    adjust: (o) => delete o.subject,
+  }),
+  corpusCase({
+    name: 'CSR subject with a multi-valued RDN, without a subject, with preserveDN',
+    csr: { subject: '/CN=www.example.com+OU=Lab/C=US' },
+    adjust: (o) => {
+      delete o.subject;
+      o.preserveDN = true;
+    },
+  }),
   corpusCase({
     name: 'service SCEP RA',
     csr: { subject: '/C=US' },

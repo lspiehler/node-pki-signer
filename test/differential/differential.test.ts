@@ -29,6 +29,12 @@ const referenceRejects = new Set<string>([
   // node-openssl-cert2 0.7.37 refuses hashes with other characters and control characters anywhere
   'template with hash with a trailing space',
   'template with custom AIA URLs with a tab and spaces',
+  // OpenSSL refuses these; the native signer refuses them or leaves them to OpenSSL
+  'SANs IPv6 with a zone',
+  'pathlen 1.5',
+  'pathlen 1e21',
+  'days 0',
+  'days -5',
 ]);
 
 // cases the native signer leaves to OpenSSL (UnsupportedError): createSigner falls back and issues the
@@ -38,6 +44,10 @@ const fallsBack = new Set<string>([
   // a second number of 16 digits or more under 2, which asn1js 4.0.0 encodes as an empty OID
   'template with EKU OID with a 16-digit second number under 2',
   'template policy OID with a 2^53 - 80 second number under 2',
+  // values asn1js or @peculiar/asn1-x509 can't encode
+  'pathlen 2^53',
+  'startdate 1940',
+  'subject with a lone surrogate',
 ]);
 
 // ADR 0005: CSRs with a version other than v1, which the reference refuses and the candidate signs
@@ -60,6 +70,9 @@ const fullSubjects = new Map<string, string>([
   ['template dev template 68', 'C=US\nO=Example Org\nCN=www.example.com'],
   ['template dev template 72', 'C=US\nO=Example Org\nCN=www.example.com'],
   ['template dev template 81', 'C=BR\nST=Louisiana\nL=New Orleans\nO=Example Org\nOU=Example Unit\nCN=www.example.com'],
+  // numbers are issued as text, where the reference leaves the attribute out
+  ['subject number', 'postalCode=70112\nCN=n.example.com'],
+  ['subject number in an array', 'postalCode=70112\nCN=n.example.com'],
 ]);
 
 const candidate: Signer = nativeSigner;

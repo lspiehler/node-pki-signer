@@ -145,7 +145,12 @@ function basicConstraints(value: unknown): Extension | undefined {
     if (typeof setting !== expected) throw new SignerError(step, `basicConstraints ${key} must be a ${expected}`);
     if (key === 'critical') critical = setting as boolean;
     if (key === 'CA') cA = setting as boolean;
-    if (key === 'pathlen' && (setting as number) >= 0) pathLenConstraint = setting as number;
+    if (key === 'pathlen' && (setting as number) >= 0) {
+      // OpenSSL refuses some (1e21 is written as 1e+21) and asn1js others (1.5); leave them to OpenSSL
+      if (!Number.isSafeInteger(setting))
+        throw new UnsupportedError(step, `basicConstraints pathlen ${String(setting)}`);
+      pathLenConstraint = setting as number;
+    }
   }
   if (Object.keys(value).length === 1 && critical) {
     throw new SignerError(step, "basicConstraints can't contain only critical");
@@ -261,7 +266,8 @@ function generalName(type: string, value: unknown): GeneralName {
     case 'URI':
       return uri(trimmed, 'SANs URI');
     case 'IP':
-      if (!isIP(trimmed)) throw new SignerError(step, `invalid SANs IP ${trimmed}`);
+      // isIP takes an IPv6 zone (fe80::1%eth0), which OpenSSL refuses and the encoding would drop
+      if (!isIP(trimmed) || trimmed.includes('%')) throw new SignerError(step, `invalid SANs IP ${trimmed}`);
       if (trimmed.includes('.') && trimmed.includes(':')) throw new UnsupportedError(step, 'IPv4-mapped IPv6 SANs');
       return new GeneralName({ iPAddress: trimmed });
     case 'RID':

@@ -4,7 +4,10 @@ import assert from 'node:assert/strict';
 import { X509Certificate } from 'node:crypto';
 import { before, describe, test } from 'node:test';
 import { caKeySpecs, createCA, createCSR, type IssuingCA } from '../test/differential/fixtures.ts';
-import { caSignCSR, SignerError, UnsupportedError, type SignParams } from './index.ts';
+import { CertificationRequest } from '@peculiar/asn1-csr';
+import { AsnConvert } from '@peculiar/asn1-schema';
+import { AlgorithmIdentifier } from '@peculiar/asn1-x509';
+import { caSignCSR, opensslKey, SignerError, UnsupportedError, type SignParams } from './index.ts';
 
 // ADR 0002: validity dates must not depend on the host's time zone
 process.env.TZ = 'Asia/Tokyo';
@@ -83,6 +86,25 @@ describe('caSignCSR', () => {
     await assert.rejects(caSignCSR({ ...params(), csr: tampered }), failsAt('verify CSR signature'));
   });
 
+  test('refuses a CSR whose signature algorithm is not for its key, as openssl req -verify does', async () => {
+    // a real ECDSA signature, labelled sha256WithRSAEncryption
+    const ec = await createCSR(
+      caKeySpecs.find((k) => k.name === 'EC-P256')!,
+      '/CN=unit.example.com',
+    );
+    const request = AsnConvert.parse(
+      Buffer.from(ec.replace(/-----[^-]+-----|\s/g, ''), 'base64'),
+      CertificationRequest,
+    );
+    request.signatureAlgorithm = new AlgorithmIdentifier({ algorithm: '1.2.840.113549.1.1.11', parameters: null });
+    const lines =
+      Buffer.from(AsnConvert.serialize(request))
+        .toString('base64')
+        .match(/.{1,64}/g) ?? [];
+    const relabelled = `-----BEGIN CERTIFICATE REQUEST-----\n${lines.join('\n')}\n-----END CERTIFICATE REQUEST-----\n`;
+    await assert.rejects(caSignCSR({ ...params(), csr: relabelled }), failsAt('verify CSR signature'));
+  });
+
   test('refuses subject attributes node-openssl-cert2 does not know', async () => {
     await assert.rejects(caSignCSR(params({ subject: { undefined: 'b' } })), failsAt('build subject'));
   });
@@ -112,6 +134,21 @@ describe('caSignCSR', () => {
       caSignCSR(params({ extensions: { nameConstraints: {} } })),
       failsAt('build extensions', UnsupportedError),
     );
+  });
+
+  test('refuses an openssl-pkcs11 key whose URI is not a pkcs11: URI', () => {
+    for (const uri of ['/etc/ssl/private/ca.key', '-engine', '']) {
+      assert.throws(
+        () =>
+          opensslKey(
+            { pkcs11: { uri, modulePath: '/usr/lib/softhsm/libsofthsm2.so' } },
+            'sha256WithRSAEncryption',
+            new Uint8Array(),
+          ),
+        failsAt('parse PKCS#11 URI'),
+        uri,
+      );
+    }
   });
 
   test('leaves PKCS#11 keys to OpenSSL without PKCS#11 sessions', async () => {
