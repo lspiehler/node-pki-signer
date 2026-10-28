@@ -40,7 +40,7 @@ signer.x509.CASignCSR({ csr, options, ca, key, password }, (err, crt) => {
 
 What falls back:
 
-- **Not supported natively** (`UnsupportedError`): hashes and key types outside the allowlist, libkmsp11 keys without `kms.keyVersion`, a missing pkcs11js or @google-cloud/kms, a CA certificate the library can't re-encode exactly, and values its ASN.1 libraries can't encode (see `docs/upstream-issues.md`, dates before 1950, lone surrogates, a `pathlen` that isn't a safe integer, and CSR subjects that `openssl ca` would cut down: multi-valued RDNs and attributes outside its signing policy).
+- **Not supported natively** (`UnsupportedError`): hashes and key types outside the allowlist, libkmsp11 keys without `kms.keyVersion`, a missing pkcs11js or @google-cloud/kms, a CA certificate the library can't re-encode exactly, and values its ASN.1 libraries can't encode (see `docs/upstream-issues.md`, dates before 1950, lone surrogates, and a `pathlen` that isn't a safe integer).
 - **Forced** by `forceOpenSSL`.
 - **Unexpected errors** in the native path, so a bug there doesn't stop issuance.
 

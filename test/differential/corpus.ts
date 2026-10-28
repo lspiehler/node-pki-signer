@@ -609,6 +609,19 @@ export const corpus: CorpusCase[] = [
     adjust: (o) => delete o.subject,
   }),
   corpusCase({
+    name: 'CSR subject only outside the signing policy, without a subject',
+    csr: { subject: '/description=Lab printer' },
+    adjust: (o) => delete o.subject,
+  }),
+  corpusCase({
+    name: 'CSR subject outside the signing policy, without a subject, with preserveDN',
+    csr: { subject: '/CN=www.example.com/description=Lab printer' },
+    adjust: (o) => {
+      delete o.subject;
+      o.preserveDN = true;
+    },
+  }),
+  corpusCase({
     name: 'CSR subject with a multi-valued RDN, without a subject',
     csr: { subject: '/CN=www.example.com+OU=Lab/C=US' },
     adjust: (o) => delete o.subject,

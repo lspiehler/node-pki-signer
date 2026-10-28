@@ -114,15 +114,14 @@ const policyOIDs = policyOrder.map((name) => attributes[name]?.oid);
 /**
  * A CSR's subject as `openssl ca` issues it without `-subj`: one attribute per RDN (a multi-valued RDN is
  * split), in signing_policy order, repeated attributes in their given order; or as it is with preserveDN.
+ * Attributes outside the policy are left out (ADR 0002): the CA's profile decides what the subject holds.
  */
 export function orderSubject(subject: Name, preserveDN = false): Name {
   if (preserveDN) return subject;
   const ranked = [...subject].flatMap((rdn) =>
-    [...rdn].map((attribute) => {
+    [...rdn].flatMap((attribute) => {
       const rank = policyOIDs.indexOf(attribute.type);
-      // OpenSSL leaves out attributes outside the policy
-      if (rank < 0) throw new UnsupportedError('build subject', 'a CSR subject attribute outside the signing policy');
-      return { rank, rdn: new RelativeDistinguishedName([attribute]) };
+      return rank < 0 ? [] : [{ rank, rdn: new RelativeDistinguishedName([attribute]) }];
     }),
   );
   // Array.prototype.sort is stable
