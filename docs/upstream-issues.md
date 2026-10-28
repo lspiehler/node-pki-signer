@@ -16,7 +16,7 @@ Measured against OpenSSL 3.5 (`openssl asn1parse -genstr OID:<oid>`) for the thi
 | `0.40` to `0.∞`, `1.40` to `1.∞` | encoded silently, e.g. `1.40` as `2.0`; OpenSSL refuses them (X.660) | the same |
 | Decoding a number above 2^53 | wrong value | a placeholder such as `1.2.{1000000000000001}`, [asn1js issue 174](https://github.com/PeculiarVentures/asn1.js/issues/174) |
 
-Reported upstream: not yet (the second-number and X.660 rows).
+Reported upstream: [asn1js issue 225](https://github.com/PeculiarVentures/asn1.js/issues/225) (the second-number and X.660 rows, 2026-10-28).
 
 The signer uses asn1js 4.0.0 with `@peculiar/asn1-*` 3.0.0 since 0.3.7 (0.3.6 and earlier: asn1js 3.0.10).
 
