@@ -48,9 +48,8 @@ const fallsBack = new Set<string>([
   'pathlen 2^53',
   'startdate 1940',
   'subject with a lone surrogate',
-  // OpenSSL leaves out attributes outside its signing policy and splits multi-valued RDNs
+  // OpenSSL leaves out attributes outside its signing policy
   'CSR subject outside the signing policy, without a subject',
-  'CSR subject with a multi-valued RDN, without a subject',
 ]);
 
 // ADR 0005: CSRs with a version other than v1, which the reference refuses and the candidate signs

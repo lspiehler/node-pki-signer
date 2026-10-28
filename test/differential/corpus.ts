@@ -614,6 +614,14 @@ export const corpus: CorpusCase[] = [
     adjust: (o) => delete o.subject,
   }),
   corpusCase({
+    name: 'CSR subject with a multi-valued RDN, without a subject, with preserveDN',
+    csr: { subject: '/CN=www.example.com+OU=Lab/C=US' },
+    adjust: (o) => {
+      delete o.subject;
+      o.preserveDN = true;
+    },
+  }),
+  corpusCase({
     name: 'service SCEP RA',
     csr: { subject: '/C=US' },
     template: false,

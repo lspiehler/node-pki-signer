@@ -112,20 +112,21 @@ const policyOrder = Object.keys(attributes);
 const policyOIDs = policyOrder.map((name) => attributes[name]?.oid);
 
 /**
- * A CSR's subject as `openssl ca` issues it without `-subj`: in signing_policy order, repeated attributes in
- * their given order, or as it is with preserveDN.
+ * A CSR's subject as `openssl ca` issues it without `-subj`: one attribute per RDN (a multi-valued RDN is
+ * split), in signing_policy order, repeated attributes in their given order; or as it is with preserveDN.
  */
 export function orderSubject(subject: Name, preserveDN = false): Name {
   if (preserveDN) return subject;
-  const rank = (rdn: RelativeDistinguishedName): number => {
-    const oid = rdn.length === 1 ? rdn[0]?.type : undefined;
-    const index = oid === undefined ? -1 : policyOIDs.indexOf(oid);
-    // OpenSSL splits multi-valued RDNs and leaves out attributes outside the policy
-    if (index < 0) throw new UnsupportedError('build subject', 'a CSR subject attribute outside the signing policy');
-    return index;
-  };
+  const ranked = [...subject].flatMap((rdn) =>
+    [...rdn].map((attribute) => {
+      const rank = policyOIDs.indexOf(attribute.type);
+      // OpenSSL leaves out attributes outside the policy
+      if (rank < 0) throw new UnsupportedError('build subject', 'a CSR subject attribute outside the signing policy');
+      return { rank, rdn: new RelativeDistinguishedName([attribute]) };
+    }),
+  );
   // Array.prototype.sort is stable
-  return new Name([...subject].sort((a, b) => rank(a) - rank(b)));
+  return new Name(ranked.sort((a, b) => a.rank - b.rank).map(({ rdn }) => rdn));
 }
 
 /**
