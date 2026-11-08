@@ -47,10 +47,20 @@ function derToPEM(der: ArrayBuffer, label: string): string {
 const asBytes = (a: ArrayBuffer | Uint8Array) => (a instanceof Uint8Array ? a : new Uint8Array(a));
 const equal = (a: ArrayBuffer | Uint8Array, b: ArrayBuffer | Uint8Array) => Buffer.from(asBytes(a)).equals(asBytes(b));
 
+// the signature BIT STRING's unused-bits count, which @peculiar's BitString drops; OpenSSL's verify refuses anything
+// but 0 ("invalid bit string bits left")
+function signatureBitsLeft(der: Uint8Array): number | undefined {
+  const parsed = asn1js.fromBER(der);
+  const signature = parsed.result instanceof asn1js.Sequence ? parsed.result.valueBlock.value[2] : undefined;
+  return signature instanceof asn1js.BitString ? signature.valueBlock.unusedBits : undefined;
+}
+
 async function parseCSR(pem: string) {
   let csr: CertificationRequest;
+  let der: Uint8Array;
   try {
-    csr = AsnConvert.parse(pemToDER(pem, '(?:NEW )?CERTIFICATE REQUEST', 'parse CSR'), CertificationRequest);
+    der = pemToDER(pem, '(?:NEW )?CERTIFICATE REQUEST', 'parse CSR');
+    csr = AsnConvert.parse(der, CertificationRequest);
   } catch (err) {
     if (err instanceof SignerError) throw err;
     throw new SignerError('parse CSR', 'not a certificate request');
@@ -58,6 +68,7 @@ async function parseCSR(pem: string) {
   const info = csr.certificationRequestInfo;
   const raw = csr.certificationRequestInfoRaw;
   if (!raw) throw new SignerError('parse CSR', 'no certification request info');
+  if (signatureBitsLeft(der) !== 0) throw new SignerError('verify CSR signature', 'the signature has unused bits');
   // `openssl ca` refuses a request whose self-signature doesn't verify
   let publicKey: KeyObject;
   try {

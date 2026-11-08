@@ -48,7 +48,7 @@ A refusal of the request itself (`SignerError`: wrong passphrase or PIN, a token
 
 ### Checking a CSR before it is signed
 
-`verifyCSR(pem)` checks a CSR's self-signature the way signing does, so a caller can refuse a bad request before it reaches signing (for example when it is submitted). It accepts any CSR `version` (ADR 0005), unlike `openssl req -verify` in OpenSSL 3.4 and later.
+`verifyCSR(pem)` checks a CSR's self-signature the way signing does, so a caller can refuse a bad request before it reaches signing (for example when it is submitted). It accepts any CSR `version` (ADR 0005), unlike `openssl req -verify` in OpenSSL 3.4 and later, and otherwise refuses what `-verify` refuses, including a signature BIT STRING with unused bits (since 0.3.10).
 
 ```js
 const { verifyCSR, UnsupportedError } = require('node-pki-signer');
