@@ -15,6 +15,17 @@ process.env.TZ = 'Asia/Tokyo';
 
 const rsa = caKeySpecs[0]!;
 
+// an RSA 2048 CSR whose signature BIT STRING (03 82 01 01, then the unused-bits byte, in the last 261 bytes) says 1 bit
+// is unused: its signature bytes still verify, but OpenSSL refuses it ("invalid bit string bits left")
+function withBitsLeft(csr: string): string {
+  const der = Buffer.from(csr.replace(/-----[^-]+-----|\s/g, ''), 'base64');
+  const unusedBits = der.length - 257;
+  assert.deepEqual([...der.subarray(unusedBits - 4, unusedBits + 1)], [0x03, 0x82, 0x01, 0x01, 0x00]);
+  der[unusedBits] = 1;
+  const lines = der.toString('base64').match(/.{1,64}/g) ?? [];
+  return `-----BEGIN CERTIFICATE REQUEST-----\n${lines.join('\n')}\n-----END CERTIFICATE REQUEST-----\n`;
+}
+
 describe('caSignCSR', () => {
   let ca: IssuingCA;
   let other: IssuingCA;
@@ -85,6 +96,10 @@ describe('caSignCSR', () => {
     const lines = der.toString('base64').match(/.{1,64}/g) ?? [];
     const tampered = `-----BEGIN CERTIFICATE REQUEST-----\n${lines.join('\n')}\n-----END CERTIFICATE REQUEST-----\n`;
     await assert.rejects(caSignCSR({ ...params(), csr: tampered }), failsAt('verify CSR signature'));
+  });
+
+  test('refuses a CSR whose signature has unused bits, as openssl req -verify does', async () => {
+    await assert.rejects(caSignCSR({ ...params(), csr: withBitsLeft(csr) }), failsAt('verify CSR signature'));
   });
 
   test('refuses a CSR whose signature algorithm is not for its key, as openssl req -verify does', async () => {
@@ -199,6 +214,13 @@ describe('verifyCSR', () => {
       assert.ok(!String(err).includes(body.slice(0, 40)));
       return true;
     });
+  });
+
+  test('refuses a signature with unused bits, as OpenSSL does, though its bytes verify', async () => {
+    await assert.rejects(
+      verifyCSR(withBitsLeft(await createCSR(rsa, '/CN=unit.example.com'))),
+      failsAt('verify CSR signature'),
+    );
   });
 
   test('refuses what is not a certificate request', async () => {
