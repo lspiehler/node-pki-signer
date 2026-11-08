@@ -45,3 +45,22 @@ What falls back:
 - **Unexpected errors** in the native path, so a bug there doesn't stop issuance.
 
 A refusal of the request itself (`SignerError`: wrong passphrase or PIN, a token or KMS key that isn't the CA's, a CSR whose signature doesn't verify, a subject OpenSSL would refuse) doesn't fall back, because OpenSSL refuses it too. Fallback reasons never contain keys, passphrases, PINs or CSRs. Requests that fall back get node-openssl-cert2's old subject and date behaviour (ADR 0002).
+
+### Checking a CSR before it is signed
+
+`verifyCSR(pem)` checks a CSR's self-signature the way signing does, so a caller can refuse a bad request before it reaches signing (for example when it is submitted). It accepts any CSR `version` (ADR 0005), unlike `openssl req -verify` in OpenSSL 3.4 and later.
+
+```js
+const { verifyCSR, UnsupportedError } = require('node-pki-signer');
+
+try {
+  await verifyCSR(csr);
+  // the signature verifies with the CSR's key
+} catch (err) {
+  if (err instanceof UnsupportedError) {
+    // a key or signature algorithm it can't check (e.g. RSA-PSS): ask OpenSSL
+  } else {
+    // SignerError: err.step is 'parse CSR' (not a request) or 'verify CSR signature' (doesn't verify)
+  }
+}
+```

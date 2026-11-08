@@ -80,6 +80,17 @@ async function parseCSR(pem: string) {
   return info;
 }
 
+/**
+ * Checks a CSR's self-signature as signing does, whatever its version (ADR 0005), so a caller can check a request
+ * before it is signed. Resolves when the signature verifies with the CSR's key. Rejects with a SignerError at
+ * 'parse CSR' (not a certificate request) or 'verify CSR signature' (the signature doesn't verify), or with an
+ * UnsupportedError at 'verify CSR signature' for a key or signature algorithm it can't check (e.g. RSA-PSS), which
+ * OpenSSL may. Errors never quote the CSR.
+ */
+export async function verifyCSR(pem: string): Promise<void> {
+  await parseCSR(pem);
+}
+
 // the issuer's subject, which must re-encode to its exact bytes, and its key identifier
 function parseIssuer(pem: string) {
   let x509: X509Certificate;
