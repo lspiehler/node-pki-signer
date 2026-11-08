@@ -7,7 +7,8 @@ import { caKeySpecs, createCA, createCSR, type IssuingCA } from '../test/differe
 import { CertificationRequest } from '@peculiar/asn1-csr';
 import { AsnConvert } from '@peculiar/asn1-schema';
 import { AlgorithmIdentifier } from '@peculiar/asn1-x509';
-import { caSignCSR, opensslKey, SignerError, UnsupportedError, type SignParams } from './index.ts';
+import { readFile } from 'node:fs/promises';
+import { caSignCSR, opensslKey, SignerError, UnsupportedError, verifyCSR, type SignParams } from './index.ts';
 
 // ADR 0002: validity dates must not depend on the host's time zone
 process.env.TZ = 'Asia/Tokyo';
@@ -163,5 +164,54 @@ describe('caSignCSR', () => {
       caSignCSR({ ...params(), pkcs11: { uri: 'pkcs11:object=k', modulePath: '/usr/lib/kms/libkmsp11.so' } }),
       failsAt('load CA key', UnsupportedError),
     );
+  });
+});
+
+describe('verifyCSR', () => {
+  const failsAt =
+    (step: string, type: typeof SignerError = SignerError) =>
+    (err: unknown) => {
+      assert.ok(err instanceof type, String(err));
+      assert.equal(err.step, step);
+      return true;
+    };
+  const corpus = (file: string) => readFile(new URL(`../test/corpus/${file}`, import.meta.url), 'utf8');
+
+  test('accepts a CSR whose signature verifies, for every CA key type', async () => {
+    for (const spec of caKeySpecs) {
+      await verifyCSR(await createCSR(spec, '/CN=unit.example.com'));
+    }
+  });
+
+  test('accepts CSRs with version 2 whose signature verifies (ADR 0005)', async () => {
+    await verifyCSR(await corpus('csr-version-2-meraki.pem'));
+    await verifyCSR(await corpus('csr-version-2-scep-ca.pem'));
+  });
+
+  test('refuses a CSR whose signature does not verify, without quoting it', async () => {
+    const csr = await createCSR(rsa, '/CN=unit.example.com');
+    const der = Buffer.from(csr.replace(/-----[^-]+-----|\s/g, ''), 'base64');
+    der[der.length - 1] = (der[der.length - 1] ?? 0) ^ 0xff;
+    const body = der.toString('base64');
+    const tampered = `-----BEGIN CERTIFICATE REQUEST-----\n${(body.match(/.{1,64}/g) ?? []).join('\n')}\n-----END CERTIFICATE REQUEST-----\n`;
+    await assert.rejects(verifyCSR(tampered), (err: unknown) => {
+      failsAt('verify CSR signature')(err);
+      assert.ok(!String(err).includes(body.slice(0, 40)));
+      return true;
+    });
+  });
+
+  test('refuses what is not a certificate request', async () => {
+    await assert.rejects(verifyCSR('not a CSR'), failsAt('parse CSR'));
+    const cert = (await createCA(rsa)).cert.replace(/CERTIFICATE/g, 'CERTIFICATE REQUEST');
+    await assert.rejects(verifyCSR(cert), failsAt('parse CSR'));
+  });
+
+  test('leaves an RSA-PSS signature to OpenSSL', async () => {
+    const pss = await createCSR(
+      { name: 'RSA-PSS', type: 'rsa-pss', options: { modulusLength: 2048 }, pqc: false },
+      '/CN=unit.example.com',
+    );
+    await assert.rejects(verifyCSR(pss), failsAt('verify CSR signature', UnsupportedError));
   });
 });

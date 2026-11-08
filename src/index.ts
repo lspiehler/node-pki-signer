@@ -1,5 +1,5 @@
 export { allowlisted } from './allowlist.ts';
-export { caSignCSR, type NativeSettings } from './ca-sign-csr.ts';
+export { caSignCSR, verifyCSR, type NativeSettings } from './ca-sign-csr.ts';
 export { SignerError, UnsupportedError } from './errors.ts';
 export { createKmsClient, kmsKey, type KmsClient } from './kms-key.ts';
 export { opensslKey, type OpenSSLKeySource } from './openssl-key.ts';
