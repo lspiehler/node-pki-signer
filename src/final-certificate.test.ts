@@ -316,6 +316,21 @@ describe('signFinalCertificate', () => {
       );
     });
 
+    test("refuses a KMS key the KMS backend can't sign when there is no PKCS#11 module to sign through", async () => {
+      const issuer = ca('EC-P256');
+      const precert = await precertificate(issuer);
+      const kms = new FakeKms();
+      const keyVersion = kms.add(issuer.key, issuer.password);
+      await assert.rejects(
+        signFinalCertificate(
+          { ...params(issuer, precert), key: '', kms: { keyVersion } },
+          { kms: () => Promise.resolve(kms) },
+        ),
+        (err) => err instanceof UnsupportedError && err.message.includes('ecdsa-with-SHA256 with kms keys'),
+      );
+      assert.equal(kms.requests.length, 0);
+    });
+
     test('a KMS key signs it (stand-in client)', async () => {
       const issuer = ca('RSA-2048');
       const precert = await precertificate(issuer);
@@ -350,6 +365,25 @@ describe('signFinalCertificate', () => {
         sessions.close();
         await token.remove();
       });
+      test("a KMS key the KMS backend can't sign goes through its PKCS#11 module with OpenSSL (SoftHSM standing in)", async () => {
+        for (const [name, forceOpenSSL] of [
+          ['EC-P256', undefined],
+          ['RSA-2048', ['sha256WithRSAEncryption']],
+        ] as const) {
+          const issuer = ca(name);
+          const precert = await precertificate(issuer);
+          const kms = new FakeKms();
+          const keyVersion = kms.add(issuer.key, issuer.password);
+          const pkcs11 = await token.importKey(issuer.key, issuer.password);
+          const result = await signFinalCertificate(
+            { ...params(issuer, precert), key: '', pkcs11, kms: { keyVersion } },
+            { kms: () => Promise.resolve(kms), pkcs11: sessions, ...(forceOpenSSL ? { forceOpenSSL } : {}) },
+          );
+          assert.equal(result.backend, 'openssl-pkcs11', name);
+          await assertFinal(result.data, precert, issuer, list);
+        }
+      });
+
       for (const backend of ['pkcs11', 'openssl-pkcs11']) {
         for (const name of ['RSA-2048', 'EC-P384']) {
           test(`${backend} ${name}`, async () => {
@@ -379,12 +413,15 @@ describe('signFinalCertificate', () => {
 
     test('something that is not a certificate', async () => {
       const issuer = ca('RSA-2048');
-      await refused(signFinalCertificate(params(issuer, csr)), 'parse precertificate', /not a certificate/);
+      await refused(signFinalCertificate(params(issuer, csr)), 'parse precertificate', /no CERTIFICATE PEM/);
       await refused(
         signFinalCertificate({ ...params(issuer, await precertificate(issuer)), ca: 'x' }),
         'parse CA certificate',
-        /not a certificate/,
+        /no CERTIFICATE PEM/,
       );
+      // a PEM OpenSSL can't read as a certificate
+      const garbage = '-----BEGIN CERTIFICATE-----\nAAAA\n-----END CERTIFICATE-----\n';
+      await refused(signFinalCertificate(params(issuer, garbage)), 'parse precertificate', /not a certificate/);
     });
 
     test('a certificate without the poison: an ordinary certificate', async () => {
