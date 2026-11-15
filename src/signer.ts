@@ -3,6 +3,12 @@
 import NodeOpenSSL from 'node-openssl-cert2';
 import { caSignCSR } from './ca-sign-csr.ts';
 import { SignerError, UnsupportedError } from './errors.ts';
+import {
+  opensslBackends,
+  signFinalCertificate,
+  type FinalCertificateParams,
+  type FinalCertificateResult,
+} from './final-certificate.ts';
 import { createKmsClient, type KmsClient } from './kms-key.ts';
 import type { SignParams, SignResult } from './options.ts';
 import { Pkcs11Sessions } from './pkcs11-key.ts';
@@ -52,6 +58,13 @@ export interface Signer {
       callback: (err: false | string | Error, result: CASignCSRResult | false) => void,
     ): void;
   };
+  /**
+   * Builds and signs the final certificate for a CT precertificate this CA signed: its TBS with the poison extension
+   * swapped for the SCT list, every other byte copied (ADR 0006). Signed with the CA's key by the backends these
+   * settings allow; an algorithm forced to OpenSSL goes to the openssl backends, since there is no whole-operation
+   * fallback. Rejects with a SignerError naming the step.
+   */
+  signFinalCertificate(params: FinalCertificateParams): Promise<FinalCertificateResult>;
   /** Logs out of PKCS#11 tokens and unloads their modules; the next signature opens them again. */
   close(): void;
 }
@@ -140,6 +153,14 @@ export function createSigner(settings: SignerSettings = {}): Signer {
           },
         );
       },
+    },
+    signFinalCertificate(params) {
+      return signFinalCertificate(
+        params,
+        force === true
+          ? { ...keySettings, backends: opensslBackends(settings.backends) }
+          : { ...keySettings, ...(force ? { forceOpenSSL: force } : {}) },
+      );
     },
     close() {
       pkcs11.close();

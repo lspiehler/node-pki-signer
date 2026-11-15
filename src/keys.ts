@@ -33,7 +33,11 @@ type Candidate = [backend: string, load: () => SigningKey | Promise<SigningKey>]
  * The key to sign `params` with. Throws UnsupportedError when no allowlisted backend can sign, so
  * the whole operation goes to node-openssl-cert2, and SignerError when the key itself is refused.
  */
-export async function selectKey(params: SignParams, issuerKey: KeyObject, settings: KeySettings): Promise<SigningKey> {
+export async function selectKey(
+  params: Pick<SignParams, 'key' | 'password' | 'pkcs11' | 'kms'> & { options: Pick<SignParams['options'], 'hash'> },
+  issuerKey: KeyObject,
+  settings: KeySettings,
+): Promise<SigningKey> {
   const hash = params.options.hash ?? 'sha256';
   const algorithm = signatureAlgorithm(issuerKey, hash);
   if (settings.forceOpenSSL?.includes(algorithm)) {

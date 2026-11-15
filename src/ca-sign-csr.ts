@@ -30,22 +30,23 @@ const verifyAsync = promisify(verify);
 
 const day = 24 * 60 * 60 * 1000;
 
-function pemToDER(pem: string, label: string, step: string): Uint8Array {
+export function pemToDER(pem: string, label: string, step: string): Uint8Array {
   const match = new RegExp(`-----BEGIN ${label}-----([^-]+)-----END ${label}-----`).exec(pem);
   if (!match?.[1]) throw new SignerError(step, `no ${label} PEM`);
   return new Uint8Array(Buffer.from(match[1], 'base64'));
 }
 
-function derToPEM(der: ArrayBuffer, label: string): string {
+export function derToPEM(der: ArrayBuffer | Uint8Array, label: string): string {
   const lines =
-    Buffer.from(der)
+    Buffer.from(asBytes(der))
       .toString('base64')
       .match(/.{1,64}/g) ?? [];
   return `-----BEGIN ${label}-----\n${lines.join('\n')}\n-----END ${label}-----\n`;
 }
 
 const asBytes = (a: ArrayBuffer | Uint8Array) => (a instanceof Uint8Array ? a : new Uint8Array(a));
-const equal = (a: ArrayBuffer | Uint8Array, b: ArrayBuffer | Uint8Array) => Buffer.from(asBytes(a)).equals(asBytes(b));
+export const equal = (a: ArrayBuffer | Uint8Array, b: ArrayBuffer | Uint8Array) =>
+  Buffer.from(asBytes(a)).equals(asBytes(b));
 
 // the signature BIT STRING's unused-bits count, which @peculiar's BitString drops; OpenSSL's verify refuses anything
 // but 0 ("invalid bit string bits left")
@@ -151,15 +152,21 @@ function randomSerial(): { content: ArrayBuffer; hex: string } {
   }
 }
 
-/** Signs a TBS certificate with `key` and returns the certificate DER. */
-async function signTBS(tbs: TBSCertificate, key: SigningKey, issuerKey: KeyObject): Promise<ArrayBuffer> {
-  const tbsDER = AsnConvert.serialize(tbs);
-  const signature = await key.sign(new Uint8Array(tbsDER));
-  // a token, KMS or openssl signs with a key we never see, so check it's the CA's (ADR 0003)
+/**
+ * Signs to-be-signed bytes with `key` for the signature algorithm `oid`. A token, KMS or openssl signs with a key we
+ * never see, so the signature is checked against the CA's public key (ADR 0003).
+ */
+export async function signChecked(
+  tbsDER: Uint8Array,
+  oid: string,
+  key: SigningKey,
+  issuerKey: KeyObject,
+): Promise<Uint8Array> {
+  const signature = await key.sign(tbsDER);
   if (key.backend !== 'software') {
     let verified: boolean;
     try {
-      verified = await verifyAsync(verifyHash(tbs.signature.algorithm), new Uint8Array(tbsDER), issuerKey, signature);
+      verified = await verifyAsync(verifyHash(oid), tbsDER, issuerKey, signature);
     } catch (err) {
       throw new SignerError('verify signature', err instanceof Error ? err.message : String(err));
     }
@@ -167,6 +174,13 @@ async function signTBS(tbs: TBSCertificate, key: SigningKey, issuerKey: KeyObjec
       throw new SignerError('verify signature', `the ${key.backend} key doesn't match the CA certificate`);
     }
   }
+  return signature;
+}
+
+/** Signs a TBS certificate with `key` and returns the certificate DER. */
+async function signTBS(tbs: TBSCertificate, key: SigningKey, issuerKey: KeyObject): Promise<ArrayBuffer> {
+  const tbsDER = AsnConvert.serialize(tbs);
+  const signature = await signChecked(new Uint8Array(tbsDER), tbs.signature.algorithm, key, issuerKey);
   return AsnConvert.serialize(
     new Certificate({
       tbsCertificate: tbs,

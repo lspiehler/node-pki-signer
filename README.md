@@ -46,6 +46,24 @@ What falls back:
 
 A refusal of the request itself (`SignerError`: wrong passphrase or PIN, a token or KMS key that isn't the CA's, a CSR whose signature doesn't verify, a subject OpenSSL would refuse) doesn't fall back, because OpenSSL refuses it too. Fallback reasons never contain keys, passphrases, PINs or CSRs. Requests that fall back get node-openssl-cert2's old subject and date behaviour (ADR 0002).
 
+### Final certificates for CT precertificates
+
+`signFinalCertificate` builds the final certificate for a precertificate the CA signed. It takes the precertificate, the CT logs' SCT list and the CA's key, and returns the precertificate's TBS with the poison extension replaced by the SCT list, every other byte copied, signed again (ADR 0006). The serial and dates stay the precertificate's, so the embedded SCTs verify.
+
+```js
+const { createSigner } = require('node-pki-signer');
+const signer = createSigner({ onFallback });
+
+const { data, serial, backend } = await signer.signFinalCertificate({
+  precertificate, // PEM, with the critical poison extension
+  sctList, // the extension value: the DER OCTET STRING around the TLS-encoded SCT list
+  ca, // the CA certificate, PEM
+  key, password, // or pkcs11, or kms, as for caSignCSR
+});
+```
+
+It refuses (`SignerError`, `err.step` names the step) a precertificate the CA's key didn't sign or that isn't DER, a missing or non-critical poison, an SCT list already present, and an SCT list that isn't a DER OCTET STRING around a non-empty TLS list. It has no OpenSSL fallback: `forceOpenSSL` sends the signature to the `openssl` backends, and an algorithm no allowed backend signs (RSA-PSS, Ed25519, ML-DSA on PKCS#11) is an `UnsupportedError`.
+
 ### Checking a CSR before it is signed
 
 `verifyCSR(pem)` checks a CSR's self-signature the way signing does, so a caller can refuse a bad request before it reaches signing (for example when it is submitted). It accepts any CSR `version` (ADR 0005), unlike `openssl req -verify` in OpenSSL 3.4 and later, and otherwise refuses what `-verify` refuses, including a signature BIT STRING with unused bits (since 0.3.10).
