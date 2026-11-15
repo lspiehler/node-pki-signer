@@ -128,11 +128,14 @@ function checkSctList(sctList: Uint8Array): void {
 
 /** The CA certificate's subject, as DER. */
 function caSubject(ca: Uint8Array): Uint8Array {
-  const { der, fields } = parseCertificate(ca, 'parse CA certificate');
+  // any version: only the precertificate must be a v3 certificate with extensions
+  const step = 'parse CA certificate';
+  const [tbs] = readChildren(ca, readTlv(ca, 0, ca.length, step), step);
+  const fields = tbs ? readChildren(ca, tbs, step) : [];
   // version [0], serialNumber, signature, issuer, validity, subject
   const subject = fields[fields[0]?.tag === 0xa0 ? 5 : 4];
-  if (!subject) throw new SignerError('parse CA certificate', 'not a certificate');
-  return tlvBytes(der, subject);
+  if (!subject) throw new SignerError(step, 'not a certificate');
+  return tlvBytes(ca, subject);
 }
 
 /** The backends of `backends` (all by default) that sign with openssl: for algorithms forced to OpenSSL. */
@@ -297,8 +300,11 @@ function checkFinal(
     throw new SignerError(step, 'the SCT list is not where the poison was');
   }
   // the TBS without the SCT list is the precertificate's TBS without the poison, byte for byte (RFC 6962 section 3.2),
-  // as @peculiar rather than the splice code reads them
-  if (!equal(tbsWithout(der, SCT_LIST, step), tbsWithout(precert.der, POISON, step))) {
+  // as the raw bytes browsers and CT verifiers strip, and as @peculiar (not the splice code) reads them
+  if (
+    !equal(replaceExtension(final, sctIndex, null), replaceExtension(precert, poison, null)) ||
+    !equal(tbsWithout(der, SCT_LIST, step), tbsWithout(precert.der, POISON, step))
+  ) {
     throw new SignerError(step, "the TBS differs from the precertificate's");
   }
   checkDER(der, step);
