@@ -58,6 +58,13 @@ export function signatureHash(name: string): string | null {
   return algorithm.hash;
 }
 
+/** The name of a signature algorithm OID, e.g. 'sha256WithRSAEncryption'; UnsupportedError for one it doesn't know. */
+export function signatureAlgorithmName(oid: string, step: string): string {
+  const found = Object.entries(algorithms).find(([, algorithm]) => algorithm.oid === oid);
+  if (!found) throw new UnsupportedError(step, `no signature algorithm ${oid}`);
+  return found[0];
+}
+
 /** The AlgorithmIdentifier for a signature algorithm name, e.g. 'sha256WithRSAEncryption'. */
 export function algorithmIdentifier(name: string): AlgorithmIdentifier {
   const algorithm = algorithms[name];
