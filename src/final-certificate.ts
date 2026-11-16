@@ -21,12 +21,14 @@ import type { SigningKey } from './signing-key.ts';
  * temp file. This library never writes a key to a file (ADR 0003), so that stays in node-openssl-cert2 (ADR 0006).
  */
 export interface FinalCertificateSigner {
-  /** who signs, for the result's `backend`, e.g. 'node-openssl-cert2'; never 'software' */
+  /** who signs, for the result's `backend`, e.g. 'node-openssl-cert2'; never 'software'. Read once. */
   backend: string;
   /**
-   * The signature value over `tbs` with the CA's key, as it goes into the BIT STRING (DER for ECDSA). `name` is the
-   * precertificate's signature algorithm, e.g. 'ecdsa-with-SHA256'; `hash` its digest, e.g. 'sha256', or undefined for
-   * algorithms that sign the data itself (ML-DSA, SLH-DSA, Ed25519).
+   * The signature value over `tbs` (a copy) with the CA's key, as it goes into the BIT STRING (DER for ECDSA). `name` is
+   * the precertificate's signature algorithm, e.g. 'ecdsa-with-SHA256'; `hash` its digest, e.g. 'sha256', or undefined
+   * for algorithms that sign the data itself (ML-DSA, SLH-DSA; Ed25519 and RSA-PSS CAs are refused before this). A
+   * rejection becomes a SignerError at step `sign with <backend>` with the first line of its message, so the message
+   * must not carry the key or its password.
    */
   sign(tbs: Uint8Array, algorithm: { name: string; hash: string | undefined }): Promise<Uint8Array>;
 }
@@ -43,9 +45,10 @@ export interface FinalCertificateParams extends Pick<SignParams, 'ca' | 'passwor
   /** issuer private key, PEM, when it isn't on a token or in KMS */
   key?: string;
   /**
-   * signs instead of a backend: `key`, `pkcs11` and `kms` are then ignored. Everything else is the same: the
+   * signs instead of a backend: `key`, `password`, `pkcs11` and `kms` are then ignored. Everything else is the same: the
    * precertificate is checked, the final certificate built here, its signature checked against the CA's key before it
-   * is used, and the result checked. The allowlist doesn't apply: the caller chose how to sign.
+   * is used, and the result checked. The allowlist, `backends` and `forceOpenSSL` don't apply: the caller chose how to
+   * sign.
    */
   signer?: FinalCertificateSigner;
 }
@@ -55,7 +58,7 @@ export interface FinalCertificateResult {
   data: string;
   /** its serial number, the precertificate's, upper-case hex */
   serial: string;
-  /** the backend that signed it, e.g. 'software', 'openssl', 'pkcs11' */
+  /** the backend that signed it, e.g. 'software', 'openssl', 'pkcs11', or a caller's signer's `backend` */
   backend: string;
 }
 
@@ -251,7 +254,7 @@ async function finalKey(
   ca: X509Certificate,
   settings: KeySettings,
 ): Promise<SigningKey> {
-  if (params.signer) return callerKey(params.signer, name, hash, ca);
+  if (params.signer) return callerKey(params.signer, name, hash, ca, params);
   const forced = settings.forceOpenSSL?.includes(name);
   const backends = forced ? opensslBackends(settings.backends) : settings.backends;
   try {
@@ -271,28 +274,45 @@ async function finalKey(
 }
 
 /**
- * A SigningKey over the caller's signer. Its public key is the CA certificate's, so the key check before signing passes,
- * and signChecked verifies the signature against the CA's key, which only it can catch: a signer named 'software'
- * would skip that check, so it is refused.
+ * A SigningKey over the caller's signer. Its public key is the CA certificate's, so the key check before signing passes;
+ * signChecked verifies the signature against the CA's key before it is used, and checkFinal verifies the certificate.
+ * signChecked skips that for the software backend, so a signer named 'software' is refused, and the name is read once,
+ * so it can't change after the check. The signer gets a copy of the TBS, so changing it in place can't change what is
+ * verified and spliced.
  */
-function callerKey(signer: FinalCertificateSigner, name: string, hash: string, ca: X509Certificate): SigningKey {
-  if (signer.backend === 'software') {
+function callerKey(
+  signer: FinalCertificateSigner,
+  name: string,
+  hash: string,
+  ca: X509Certificate,
+  params: Pick<FinalCertificateParams, 'key' | 'password'>,
+): SigningKey {
+  const backend = signer.backend;
+  if (backend === 'software') {
     throw new SignerError('load CA key', "a caller's signer can't be named software");
   }
-  const step = `sign with ${signer.backend}`;
+  const step = `sign with ${backend}`;
   return {
-    backend: signer.backend,
+    backend,
     algorithm: name,
     publicKey: () => Promise.resolve(new Uint8Array(ca.publicKey.export({ type: 'spki', format: 'der' }))),
     async sign(tbs) {
       try {
-        return await signer.sign(tbs, { name, hash: hash === 'default' ? undefined : hash });
+        return await signer.sign(tbs.slice(), { name, hash: hash === 'default' ? undefined : hash });
       } catch (err) {
-        if (err instanceof SignerError) throw err;
-        throw new SignerError(step, err instanceof Error ? err.message : String(err).trim());
+        // every failure is this step, even a SignerError or UnsupportedError: there is no fallback after a signer
+        throw new SignerError(step, signerMessage(err, params));
       }
     },
   };
+}
+
+/** The first line of a signer's error, unless it quotes the key or its password */
+function signerMessage(err: unknown, params: Pick<FinalCertificateParams, 'key' | 'password'>): string {
+  const line = (err instanceof Error ? err.message : String(err)).trim().split('\n')[0] ?? '';
+  const quotes = (secret: string | undefined) => secret !== undefined && secret !== '' && line.includes(secret);
+  if (quotes(params.password) || quotes(params.key) || line.includes('PRIVATE KEY')) return 'the signer failed';
+  return line || 'the signer failed';
 }
 
 /** Refuses a certificate that isn't DER: re-encoding what @peculiar parses must give the same bytes. */
