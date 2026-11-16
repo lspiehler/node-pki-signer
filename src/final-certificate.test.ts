@@ -402,6 +402,145 @@ describe('signFinalCertificate', () => {
     });
   });
 
+  // pkiaas with native signing off: node-openssl-cert2's x509.signTBS signs, since this library writes no key to a file
+  describe("a caller's signer", () => {
+    /** signs with node:crypto, standing in for node-openssl-cert2, and records what it was asked */
+    const callerSigner = (issuer: IssuingCA, backend = 'node-openssl-cert2') => {
+      const calls: { name: string; hash: string | undefined }[] = [];
+      const key = createPrivateKey({ key: issuer.key, passphrase: issuer.password });
+      return {
+        calls,
+        signer: {
+          backend,
+          sign: (tbs: Uint8Array, algorithm: { name: string; hash: string | undefined }) => {
+            calls.push(algorithm);
+            return Promise.resolve(new Uint8Array(sign(algorithm.hash ?? null, tbs, key)));
+          },
+        },
+      };
+    };
+
+    for (const [name, hash, expected] of [
+      ['RSA-2048', undefined, { name: 'sha256WithRSAEncryption', hash: 'sha256' }],
+      ['EC-P384', 'sha384', { name: 'ecdsa-with-SHA384', hash: 'sha384' }],
+      ['RSA-2048', 'sha512', { name: 'sha512WithRSAEncryption', hash: 'sha512' }],
+      ['ML-DSA-65', undefined, { name: 'ML-DSA-65', hash: undefined }],
+      ['SLH-DSA-SHA2-128F', undefined, { name: 'SLH-DSA-SHA2-128f', hash: undefined }],
+    ] as const) {
+      test(`${name}: it signs instead of a backend, with the precertificate's algorithm`, async () => {
+        const issuer = ca(name);
+        const precert = await precertificate(issuer, hash);
+        const { calls, signer } = callerSigner(issuer);
+        // no key: the signer holds it
+        const result = await signFinalCertificate({ ...params(issuer, precert), key: '', password: '', signer });
+        assert.equal(result.backend, 'node-openssl-cert2');
+        assert.deepEqual(calls, [expected]);
+        await assertFinal(result.data, precert, issuer, list);
+      });
+    }
+
+    test('forceOpenSSL and the backends setting leave it alone: the caller chose how to sign', async () => {
+      const issuer = ca('RSA-2048');
+      const precert = await precertificate(issuer);
+      const result = await createSigner({ forceOpenSSL: true, backends: ['software'] }).signFinalCertificate({
+        ...params(issuer, precert),
+        signer: callerSigner(issuer).signer,
+      });
+      assert.equal(result.backend, 'node-openssl-cert2');
+    });
+
+    test("refuses a signature by a key that isn't the CA's", async () => {
+      const issuer = ca('RSA-2048');
+      const precert = await precertificate(issuer);
+      await assert.rejects(
+        signFinalCertificate({ ...params(issuer, precert), signer: callerSigner(ca('RSA-2048 other key')).signer }),
+        (err) =>
+          err instanceof SignerError &&
+          err.step === 'verify signature' &&
+          err.message.includes('node-openssl-cert2 key'),
+      );
+    });
+
+    test('every failure of the signer is a SignerError at its step, even an UnsupportedError: no fallback', async () => {
+      const issuer = ca('EC-P256');
+      const precert = await precertificate(issuer);
+      for (const [thrown, message] of [
+        [new Error('bad decrypt\nmore detail'), 'bad decrypt'],
+        [new SignerError('inner', 'nope'), 'inner: nope'],
+        [new UnsupportedError('inner', 'ML-DSA'), 'inner: ML-DSA'],
+        // never the key or its password
+        [new Error(`bad decrypt ${issuer.password}`), 'the signer failed'],
+        [new Error(issuer.key), 'the signer failed'],
+      ] as const) {
+        const signer = { backend: 'node-openssl-cert2', sign: () => Promise.reject(thrown) };
+        await assert.rejects(signFinalCertificate({ ...params(issuer, precert), signer }), (err) => {
+          assert.ok(err instanceof SignerError && !(err instanceof UnsupportedError), String(err));
+          assert.equal(err.step, 'sign with node-openssl-cert2');
+          assert.equal(err.message, `sign with node-openssl-cert2: ${message}`);
+          return true;
+        });
+      }
+    });
+
+    test('a signer that changes the TBS gets a copy: a signature over other bytes is refused', async () => {
+      const issuer = ca('RSA-2048');
+      const precert = await precertificate(issuer);
+      const { signer } = callerSigner(issuer);
+      const changing = {
+        backend: 'node-openssl-cert2',
+        sign: (tbs: Uint8Array, algorithm: { name: string; hash: string | undefined }) => {
+          tbs.set([(tbs.at(-1) ?? 0) ^ 1], tbs.length - 1);
+          return signer.sign(tbs, algorithm);
+        },
+      };
+      await assert.rejects(
+        signFinalCertificate({ ...params(issuer, precert), signer: changing }),
+        (err) => err instanceof SignerError && err.step === 'verify signature',
+      );
+    });
+
+    test('a signature with a byte too many is refused', async () => {
+      const issuer = ca('EC-P256');
+      const precert = await precertificate(issuer);
+      const { signer } = callerSigner(issuer);
+      const padded = {
+        backend: 'node-openssl-cert2',
+        sign: async (tbs: Uint8Array, algorithm: { name: string; hash: string | undefined }) =>
+          new Uint8Array([...(await signer.sign(tbs, algorithm)), 0]),
+      };
+      await assert.rejects(
+        signFinalCertificate({ ...params(issuer, precert), signer: padded }),
+        (err) => err instanceof SignerError && err.step === 'verify signature',
+      );
+    });
+
+    test("reads the signer's name once, so it can't become software after the check", async () => {
+      const issuer = ca('RSA-2048');
+      const precert = await precertificate(issuer);
+      const { signer } = callerSigner(issuer);
+      const names = ['node-openssl-cert2', 'software', 'software', 'software'];
+      const shifting = {
+        get backend() {
+          return names.shift() ?? 'software';
+        },
+        sign: signer.sign,
+      };
+      const result = await signFinalCertificate({ ...params(issuer, precert), signer: shifting });
+      assert.equal(result.backend, 'node-openssl-cert2');
+    });
+
+    test("refuses a signer named software, whose signature wouldn't be checked", async () => {
+      const issuer = ca('EC-P256');
+      const precert = await precertificate(issuer);
+      const { calls, signer } = callerSigner(issuer, 'software');
+      await assert.rejects(
+        signFinalCertificate({ ...params(issuer, precert), signer }),
+        (err) => err instanceof SignerError && err.step === 'load CA key',
+      );
+      assert.equal(calls.length, 0);
+    });
+  });
+
   describe('refuses', () => {
     const refused = async (p: Promise<unknown>, step: string, message: RegExp) =>
       assert.rejects(p, (err) => {

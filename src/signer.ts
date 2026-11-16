@@ -62,7 +62,8 @@ export interface Signer {
    * Builds and signs the final certificate for a CT precertificate this CA signed: its TBS with the poison extension
    * swapped for the SCT list, every other byte copied (ADR 0006). Signed with the CA's key by the backends these
    * settings allow; an algorithm forced to OpenSSL goes to the openssl backends, since there is no whole-operation
-   * fallback. Rejects with a SignerError naming the step.
+   * fallback. A caller's `params.signer` signs instead, and these settings don't apply to it. Rejects with a
+   * SignerError naming the step.
    */
   signFinalCertificate(params: FinalCertificateParams): Promise<FinalCertificateResult>;
   /** Logs out of PKCS#11 tokens and unloads their modules; the next signature opens them again. */
