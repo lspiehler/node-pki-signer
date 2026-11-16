@@ -15,6 +15,22 @@ import { opensslKey } from './openssl-key.ts';
 import type { SignParams } from './options.ts';
 import type { SigningKey } from './signing-key.ts';
 
+/**
+ * Signs the final certificate's TBS outside the library, for a caller that must sign with OpenSSL in a way this library
+ * doesn't: pkiaas with native signing off, through node-openssl-cert2's x509.signTBS, which hands OpenSSL the key in a
+ * temp file. This library never writes a key to a file (ADR 0003), so that stays in node-openssl-cert2 (ADR 0006).
+ */
+export interface FinalCertificateSigner {
+  /** who signs, for the result's `backend`, e.g. 'node-openssl-cert2'; never 'software' */
+  backend: string;
+  /**
+   * The signature value over `tbs` with the CA's key, as it goes into the BIT STRING (DER for ECDSA). `name` is the
+   * precertificate's signature algorithm, e.g. 'ecdsa-with-SHA256'; `hash` its digest, e.g. 'sha256', or undefined for
+   * algorithms that sign the data itself (ML-DSA, SLH-DSA, Ed25519).
+   */
+  sign(tbs: Uint8Array, algorithm: { name: string; hash: string | undefined }): Promise<Uint8Array>;
+}
+
 /** The precertificate, its SCTs, and the CA key that signed it, in the key sources SignParams has. */
 export interface FinalCertificateParams extends Pick<SignParams, 'ca' | 'password' | 'pkcs11' | 'kms'> {
   /** the precertificate the CT logs answered, PEM */
@@ -26,6 +42,12 @@ export interface FinalCertificateParams extends Pick<SignParams, 'ca' | 'passwor
   sctList: Uint8Array;
   /** issuer private key, PEM, when it isn't on a token or in KMS */
   key?: string;
+  /**
+   * signs instead of a backend: `key`, `pkcs11` and `kms` are then ignored. Everything else is the same: the
+   * precertificate is checked, the final certificate built here, its signature checked against the CA's key before it
+   * is used, and the result checked. The allowlist doesn't apply: the caller chose how to sign.
+   */
+  signer?: FinalCertificateSigner;
 }
 
 export interface FinalCertificateResult {
@@ -229,6 +251,7 @@ async function finalKey(
   ca: X509Certificate,
   settings: KeySettings,
 ): Promise<SigningKey> {
+  if (params.signer) return callerKey(params.signer, name, hash, ca);
   const forced = settings.forceOpenSSL?.includes(name);
   const backends = forced ? opensslBackends(settings.backends) : settings.backends;
   try {
@@ -245,6 +268,31 @@ async function finalKey(
     const publicKey = new Uint8Array(ca.publicKey.export({ type: 'spki', format: 'der' }));
     return opensslKey({ pkcs11 }, name, publicKey, settings.binpath);
   }
+}
+
+/**
+ * A SigningKey over the caller's signer. Its public key is the CA certificate's, so the key check before signing passes,
+ * and signChecked verifies the signature against the CA's key, which only it can catch: a signer named 'software'
+ * would skip that check, so it is refused.
+ */
+function callerKey(signer: FinalCertificateSigner, name: string, hash: string, ca: X509Certificate): SigningKey {
+  if (signer.backend === 'software') {
+    throw new SignerError('load CA key', "a caller's signer can't be named software");
+  }
+  const step = `sign with ${signer.backend}`;
+  return {
+    backend: signer.backend,
+    algorithm: name,
+    publicKey: () => Promise.resolve(new Uint8Array(ca.publicKey.export({ type: 'spki', format: 'der' }))),
+    async sign(tbs) {
+      try {
+        return await signer.sign(tbs, { name, hash: hash === 'default' ? undefined : hash });
+      } catch (err) {
+        if (err instanceof SignerError) throw err;
+        throw new SignerError(step, err instanceof Error ? err.message : String(err).trim());
+      }
+    },
+  };
 }
 
 /** Refuses a certificate that isn't DER: re-encoding what @peculiar parses must give the same bytes. */

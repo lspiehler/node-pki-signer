@@ -62,6 +62,8 @@ const { data, serial, backend } = await signer.signFinalCertificate({
 });
 ```
 
+To sign it some other way, pass `signer: { backend, sign(tbs, { name, hash }) }` instead of the key: it returns the signature value over the TBS (`hash` is undefined for ML-DSA, SLH-DSA and Ed25519). pkiaas does this with native signing off, through node-openssl-cert2's `x509.signTBS`, since this library never writes a key to a file (ADR 0006 amendment). The signature is still checked against the CA's key before it is used.
+
 It refuses (`SignerError`, `err.step` names the step) a precertificate the CA's key didn't sign or that isn't DER, a missing or non-critical poison, an SCT list already present, and an SCT list that isn't a DER OCTET STRING around a non-empty TLS list. It has no OpenSSL fallback: `forceOpenSSL` sends the signature to the `openssl` backends, and an algorithm no allowed backend signs (RSA-PSS, Ed25519, ML-DSA on PKCS#11) is an `UnsupportedError`.
 
 ### Checking a CSR before it is signed
